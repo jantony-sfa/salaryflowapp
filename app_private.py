@@ -57,6 +57,7 @@ def load_user_data(user_email):
         df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
 
     # CHARGEMENT CHARGES
+
    try:
         ws_c = sh.worksheet("CHARGES")
         data_c = ws_c.get_all_records()
