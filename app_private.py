@@ -233,30 +233,27 @@ if 'user_email' not in st.session_state:
                 st.error("Format d'email invalide")
     st.stop()
 
-# --- 5. INITIALISATION SESSION ---
-user = st.session_state['user_email']
-# --- 5. INITIALISATION SESSION (BLINDÉE) ---
+
+# --- 5. INITIALISATION SESSION (SÉCURISÉE) ---
 user = st.session_state['user_email']
 
-# 1. On initialise la simulation SI elle n'existe pas (C'est ça qui plante chez toi)
+# Initialisation des variables de base si elles n'existent pas
 if 'sim_val' not in st.session_state:
     st.session_state['sim_val'] = 0.0
-
-# 2. On initialise la date de vue
 if 'view_date' not in st.session_state:
     st.session_state['view_date'] = datetime.now().replace(day=1)
 
-# Cette condition est CRUCIALE : elle empêche de recharger si c'est déjà fait
+# LE FIX : On ne charge qu'une seule fois au démarrage
 if 'data_loaded' not in st.session_state:
-    with st.spinner('Synchronisation Cloud...'):
-        # On charge depuis le Cloud
+    with st.spinner('Chargement initial...'):
+        # On récupère les données propres du Cloud
         df_cloud_r, df_cloud_c = load_user_data(user)
         
-        # On ÉCRASE ce qu'il y a en mémoire (au lieu d'ajouter)
+        # ON ÉCRASE (pas de concaténation ici !)
         st.session_state['data_revenus'] = df_cloud_r
         st.session_state['data_charges'] = df_cloud_c
         
-        # On marque comme chargé pour ne plus y toucher
+        # On verrouille le chargement
         st.session_state['data_loaded'] = True
 
 # --- 6. MOTEUR & INTELLIGENCE ---
