@@ -349,12 +349,21 @@ if 'data_loaded' not in st.session_state:
 # --- 6. MOTEUR & INTELLIGENCE ---
 def calculer_net(type_c, taux, heures, paniers, charges_pct):
     try:
-        t, h = float(taux), float(heures)
-        p = float(paniers) if paniers else 0.0
-        pct = float(charges_pct) / 100.0 if charges_pct else 0.0
-        if type_c == "Intérim": return round(((t * h * 1.21) * 0.78) + p, 2)
-        else: return round(((t * h) * (1 - pct)) + p, 2)
-    except: return 0.0
+        # On remplace les virgules par des points avant conversion au cas où
+        t = float(str(taux).replace(',', '.'))
+        h = float(str(heures).replace(',', '.'))
+        p = float(str(paniers).replace(',', '.')) if paniers else 0.0
+        pct = float(str(charges_pct).replace(',', '.')) / 100.0 if charges_pct else 0.0
+        
+        if type_c == "Intérim":
+            # Calcul brut -> net intérim (IFM/CP inclus)
+            res = ((t * h * 1.21) * 0.78) + p
+        else:
+            res = ((t * h) * (1 - pct)) + p
+            
+        return round(float(res), 2) # Retourne un NOMBRE pur
+    except Exception as e:
+        return 0.0
 
 def analyser_situation(solde, score, timeline_df):
     tension_date = None
