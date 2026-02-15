@@ -340,17 +340,17 @@ elif menu == "💳 Charges & Budgets":
     st.header("Mes Charges")
     st.info("Chaque modification est sauvegardée dans votre espace Cloud.")
     
-    # 1. Configuration de l'éditeur pour accepter les virgules et les centimes
     edited = st.data_editor(
         st.session_state['data_charges'],
         num_rows="dynamic",
         use_container_width=True,
         column_config={
+            "User": None,  # <--- 1. ON CACHE LA COLONNE USER ICI
             "Montant": st.column_config.NumberColumn(
                 "Montant (€)",
                 min_value=0.0,
                 max_value=10000.0,
-                step=0.01,  # C'est ça qui autorise les virgules/décimales !
+                step=0.01,
                 format="%.2f €"
             ),
             "Jour": st.column_config.NumberColumn(
@@ -368,19 +368,16 @@ elif menu == "💳 Charges & Budgets":
     
     if st.button("☁️ Mettre à jour le Cloud", type="primary"):
         try:
-            # 2. NETTOYAGE MAGIQUE (Remplacement Virgule -> Point)
-            # On s'assure que tout est bien converti en chiffre pour le calcul
+            # Nettoyage des virgules (12,50 -> 12.50)
             if "Montant" in edited.columns:
-                # On convertit en texte, on remplace la virgule, et on remet en chiffre
                 edited["Montant"] = edited["Montant"].astype(str).str.replace(",", ".", regex=False)
                 edited["Montant"] = pd.to_numeric(edited["Montant"], errors='coerce').fillna(0.0)
 
-            # 3. Sauvegarde
+            # Sauvegarde
             save_charges_cloud(user, edited)
             st.session_state['data_charges'] = edited
             st.success("✅ Vos charges sont à jour !")
-            st.rerun() # Rafraichit la page pour afficher les bons totaux
+            st.rerun()
             
         except Exception as e:
-            st.error(f"Erreur : {e}")
             st.error(f"Erreur : {e}")
