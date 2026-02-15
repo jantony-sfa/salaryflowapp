@@ -155,6 +155,15 @@ def save_revenu_cloud(user_email, row_dict):
     ]
     ws.append_row(row)
 
+# Force la conversion en nombre décimal avant l'envoi au Cloud
+try:
+    montant_propre = float(str(montant_net).replace(',', '.'))
+except:
+    montant_propre = 0.0
+
+# Dans ton dictionnaire 'data' à envoyer au sheet :
+"Montant Net": montant_propre,
+
 def save_charges_cloud(user_email, df_charges):
     sh = get_db_connection()
     ws = sh.worksheet("CHARGES")
