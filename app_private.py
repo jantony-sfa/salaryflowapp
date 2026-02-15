@@ -13,58 +13,52 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- AJOUTER JUSTE APRES LE set_page_config ---
-
-# Fonction de vérification du mot de passe
-def check_password():
-    """Renvoie `True` si l'utilisateur a le bon mot de passe."""
-
-    def password_entered():
-        """Vérifie si le mot de passe saisi est correct."""
-        if st.session_state["password"] == "BETA2024": # <--- TON MOT DE PASSE ICI
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Ne pas garder le mot de passe en mémoire
-        else:
-            st.session_state["password_correct"] = False
-
-    if "password_correct" not in st.session_state:
-        # Première visite, on affiche le champ mot de passe
-        st.text_input(
-            "🔒 Entrez le mot de passe Beta-Testeur", 
-            type="password", 
-            on_change=password_entered, 
-            key="password"
-        )
-        return False
-    elif not st.session_state["password_correct"]:
-        # Mot de passe incorrect
-        st.text_input(
-            "🔒 Entrez le mot de passe Beta-Testeur", 
-            type="password", 
-            on_change=password_entered, 
-            key="password"
-        )
-        st.error("😕 Mot de passe incorrect")
-        return False
-    else:
-        # Mot de passe correct
+# --- SYSTEME DE LOGIN MULTI-CLIENTS ---
+def check_login():
+    """Retourne True si l'utilisateur est connecté."""
+    
+    # Si déjà connecté, on laisse passer
+    if st.session_state.get("authenticated", False):
         return True
 
-# --- VERROUILLAGE DE L'APPLICATION ---
-if check_password():
-    # ... TOUT LE RESTE DE TON CODE VIENT ICI (INDENTÉ ou PAS, mais le return False bloque l'exécution avant)
+    # Interface de connexion propre
+    st.markdown("## 🔒 Accès Client SalaryFlow")
     
-    # Pour faire simple, ne mets pas tout ton code dans un "if".
-    # Le script s'arrête si check_password retourne False.
-    pass 
-else:
-    st.stop() # <--- CECI EMPÊCHE LE RESTE DU CODE DE S'EXÉCUTER
+    # Création de deux colonnes pour centrer ou juste un formulaire simple
+    with st.form("login_form"):
+        email = st.text_input("Email Client")
+        password = st.text_input("Mot de passe", type="password")
+        submit = st.form_submit_button("Se connecter 🚀")
+        
+        if submit:
+            # On va chercher les mots de passe dans les secrets de Streamlit
+            secrets = st.secrets["passwords"]
+            
+            # Vérification
+            if email in secrets and secrets[email] == password:
+                st.session_state["authenticated"] = True
+                st.session_state["user"] = email
+                st.success("Connexion réussie !")
+                st.rerun()
+            else:
+                st.error("Email ou mot de passe incorrect.")
+                
+    return False
+
+# --- VERROUILLAGE ---
+if not check_login():
+    st.stop() # Arrête tout si pas connecté
+
+# --- MESSAGE DE BIENVENUE ---
+st.sidebar.info(f"Connecté en tant que : {st.session_state.get('user')}")
+if st.sidebar.button("Déconnexion"):
+    st.session_state["authenticated"] = False
+    st.rerun()
 
 # ---------------------------------------------------------
-# ICI COMMENCE TON VRAI CODE (Styles CSS, Calculs, etc.)
+# ICI COMMENCE TON VRAI CODE (Styles CSS, etc.)
 # ---------------------------------------------------------
 
-# --- 2. STYLES CSS (DESIGN EMOTIONNEL) ---
 # --- 2. STYLES CSS (MODIFIÉ POUR CACHER LE CODE) ---
 st.markdown("""
     <style>
