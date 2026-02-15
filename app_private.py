@@ -75,22 +75,24 @@ def load_user_data(user_email):
     
     # --- 1. CHARGEMENT REVENUS ---
     try:
-        # ON DÉFINIT LA FEUILLE (C'est ce qui manquait !)
         ws_r = sh.worksheet("DATA")
         data_r = ws_r.get_all_records()
         df_r = pd.DataFrame(data_r)
         
         if not df_r.empty:
-            # Filtrage par utilisateur
-            df_r = df_r[df_r["User"] == user_email]
+            # Sécurité : on vérifie que la colonne User existe
+            if "User" in df_r.columns:
+                df_r = df_r[df_r["User"] == user_email]
             
-            # FIX ANTI-GONFLEMENT : Nettoyage des virgules et conversion
-            # On transforme tout en texte, on remplace la virgule par un point, 
-            # et on convertit en nombre réel.
-            df_r["Montant Net"] = df_r["Montant Net"].astype(str).str.replace(',', '.', regex=False)
+            # --- FIX ANTI-GONFLEMENT (SÉCURITÉ ABSOLUE) ---
+            # 1. On force en texte et on vire tout sauf chiffres, points, virgules et signes
+            df_r["Montant Net"] = df_r["Montant Net"].astype(str).str.replace(r'[^\d.,+-]', '', regex=True)
+            # 2. On remplace la virgule par un point
+            df_r["Montant Net"] = df_r["Montant Net"].str.replace(',', '.', regex=False)
+            # 3. On convertit en vrai nombre
             df_r["Montant Net"] = pd.to_numeric(df_r["Montant Net"], errors='coerce').fillna(0.0)
             
-            # Suppression des lignes fantômes (montant 0 ou vide)
+            # 4. Nettoyage final : on vire les lignes vides ou à zéro
             df_r = df_r[df_r["Montant Net"] > 0]
         else:
             df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
@@ -105,13 +107,15 @@ def load_user_data(user_email):
         df_c = pd.DataFrame(data_c)
         
         if not df_c.empty:
-            df_c = df_c[df_c["User"] == user_email]
-            # Même fix pour les charges
-            df_c["Montant"] = df_c["Montant"].astype(str).str.replace(',', '.', regex=False)
+            if "User" in df_c.columns:
+                df_c = df_c[df_c["User"] == user_email]
+            
+            # Même fix de sécurité pour les montants des charges
+            df_c["Montant"] = df_c["Montant"].astype(str).str.replace(r'[^\d.,+-]', '', regex=True)
+            df_c["Montant"] = df_c["Montant"].str.replace(',', '.', regex=False)
             df_c["Montant"] = pd.to_numeric(df_c["Montant"], errors='coerce').fillna(0.0)
         
         if df_c.empty:
-            # Ton bloc de charges par défaut reste ici...
             default_charges = [
                 ("EPARGNE", "Court Terme", "Livret A", 0, 1),
                 ("FIXES", "Logement", "Loyer", 0, 5),
@@ -132,7 +136,6 @@ def load_user_data(user_email):
         df_c = pd.DataFrame()
 
     return df_r, df_c
-
     # --- 2. CHARGEMENT CHARGES ---
     try:
         ws_c = sh.worksheet("CHARGES")
