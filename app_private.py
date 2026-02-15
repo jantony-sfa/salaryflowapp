@@ -149,8 +149,6 @@ try:
 except:
     montant_propre = 0.0
 
-# Dans ton dictionnaire 'data' à envoyer au sheet :
-"Montant Net": montant_propre,
 
 def save_charges_cloud(user_email, df_charges):
     sh = get_db_connection()
