@@ -10,29 +10,44 @@ def update_revenus_cloud(user_email, df_cleaned):
     sh = get_db_connection()
     ws = sh.worksheet("DATA")
     
-    # 1. On récupère TOUT le fichier
+    # 1. On récupère TOUT le fichier pour ne pas effacer les autres clients
     all_records = ws.get_all_records()
     
-    # 2. On garde les données des AUTRES utilisateurs (s'il y en a)
-    # On filtre pour ne garder que ce qui n'est PAS à toi
+    # 2. On garde les données des AUTRES utilisateurs
     cleaned_data = [r for r in all_records if str(r.get("User")) != str(user_email)]
     
-    # 3. On ajoute TES données corrigées
+    # 3. On prépare TES nouvelles données corrigées
+    new_user_data = []
     for _, row in df_cleaned.iterrows():
         r = row.to_dict()
         r["User"] = user_email
-        # Sécurisation des dates pour le JSON
+        
+        # --- FIX ANTI-GONFLEMENT SÉCURISÉ ---
+        try:
+            # Nettoyage de la valeur (virgule -> point)
+            val_propre = str(r["Montant Net"]).replace(',', '.')
+            # Conversion en nombre réel (float)
+            r["Montant Net"] = round(float(val_propre), 2)
+        except:
+            r["Montant Net"] = 0.0
+            
+        # Conversion des dates en texte pour Google Sheets
         r["Date"] = str(r["Date"])
         r["Date Paiement"] = str(r["Date Paiement"])
-        cleaned_data.append(r)
+        new_user_data.append(r)
+    
+    # 4. FUSION : On rassemble les autres utilisateurs + tes nouvelles données
+    final_to_upload = cleaned_data + new_user_data
         
-    # 4. On écrase le Sheet avec la liste propre
+    # 5. ENVOI : On vide le sheet et on remplace tout d'un coup
     ws.clear()
-    if cleaned_data:
-        headers = list(cleaned_data[0].keys())
-        ws.update([headers] + [list(d.values()) for d in cleaned_data])
+    if final_to_upload:
+        # On extrait les titres des colonnes depuis le premier dictionnaire
+        headers = list(final_to_upload[0].keys())
+        # On envoie les titres + toutes les valeurs
+        ws.update([headers] + [list(d.values()) for d in final_to_upload])
     else:
-        # Si tout est vide, on remet les titres
+        # Si vraiment tout est vide, on remet au moins les en-têtes de base
         ws.append_row(["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
         
 # --- 1. CONFIGURATION ---
