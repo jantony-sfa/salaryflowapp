@@ -49,13 +49,22 @@ def load_user_data(user_email):
         df_r = pd.DataFrame(data_r)
         
         if not df_r.empty:
-            # Correction virgule -> point pour éviter les bugs
+            # Filtrage par utilisateur
+            df_r = df_r[df_r["User"] == user_email]
+            
+            # Correction virgule -> point
             if "Montant Net" in df_r.columns:
                 df_r["Montant Net"] = df_r["Montant Net"].astype(str).str.replace(",", ".", regex=False)
                 df_r["Montant Net"] = pd.to_numeric(df_r["Montant Net"], errors='coerce').fillna(0.0)
             
-            # Filtrage par utilisateur
-            df_r = df_r[df_r["User"] == user_email]
+            # --- NETTOYAGE ANTI-DOUBLONS & LIGNES VIDES ---
+            # 1. On supprime les doublons exacts
+            df_r = df_r.drop_duplicates()
+            # 2. On supprime les lignes où le montant est 0 (comme sur ta capture)
+            df_r = df_r[df_r["Montant Net"] > 0]
+            # 3. On supprime les lignes où il n'y a pas de Source
+            df_r = df_r[df_r["Source"] != ""]
+            
         else:
             df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
     except:
@@ -68,17 +77,20 @@ def load_user_data(user_email):
         df_c = pd.DataFrame(data_c)
         
         if not df_c.empty:
-            # --- ICI C'EST LA CORRECTION MAGIQUE ---
-            # On remplace les virgules par des points AVANT de convertir en nombre
+            # Filtrage par utilisateur
+            df_c = df_c[df_c["User"] == user_email]
+
+            # Correction virgule -> point
             if "Montant" in df_c.columns:
                 df_c["Montant"] = df_c["Montant"].astype(str).str.replace(",", ".", regex=False)
                 df_c["Montant"] = pd.to_numeric(df_c["Montant"], errors='coerce').fillna(0.0)
             
-            # Filtrage par utilisateur
-            df_c = df_c[df_c["User"] == user_email]
-        
-        # Charges par défaut si vide (nouvel utilisateur)
+            # --- NETTOYAGE CHARGES ---
+            df_c = df_c.drop_duplicates()
+            df_c = df_c[df_c["Montant"] > 0]
+            
         if df_c.empty:
+            # Charges par défaut (seulement si vide)
             default_charges = [
                 ("EPARGNE", "Court Terme", "Livret A", 0, 1),
                 ("FIXES", "Logement", "Loyer", 0, 5),
@@ -98,7 +110,7 @@ def load_user_data(user_email):
         df_c = pd.DataFrame()
 
     return df_r, df_c
-
+    
 def save_revenu_cloud(user_email, row_dict):
     sh = get_db_connection()
     ws = sh.worksheet("DATA")
