@@ -235,6 +235,16 @@ if 'user_email' not in st.session_state:
 
 # --- 5. INITIALISATION SESSION ---
 user = st.session_state['user_email']
+# --- 5. INITIALISATION SESSION (BLINDÉE) ---
+user = st.session_state['user_email']
+
+# 1. On initialise la simulation SI elle n'existe pas (C'est ça qui plante chez toi)
+if 'sim_val' not in st.session_state:
+    st.session_state['sim_val'] = 0.0
+
+# 2. On initialise la date de vue
+if 'view_date' not in st.session_state:
+    st.session_state['view_date'] = datetime.now().replace(day=1)
 
 # Cette condition est CRUCIALE : elle empêche de recharger si c'est déjà fait
 if 'data_loaded' not in st.session_state:
