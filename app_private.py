@@ -82,20 +82,18 @@ def load_user_data(user_email):
             # Filtrage par utilisateur
             df_r = df_r[df_r["User"] == user_email]
             
-            # Correction virgule -> point
+            # Correction virgule -> point (Sécurité)
             if "Montant Net" in df_r.columns:
                 df_r["Montant Net"] = df_r["Montant Net"].astype(str).str.replace(",", ".", regex=False)
                 df_r["Montant Net"] = pd.to_numeric(df_r["Montant Net"], errors='coerce').fillna(0.0)
             
-            # --- NETTOYAGE ANTI-DOUBLONS & LIGNES VIDES ---
-            # 1. On supprime les doublons exacts
-            df_r = df_r.drop_duplicates()
-            # 2. On supprime les lignes où le montant est 0 (comme sur ta capture)
+            # --- NETTOYAGE LIGHT (Permissif) ---
+            # On ne supprime PLUS les doublons (drop_duplicates retiré)
+            # On garde juste ce qui est "réel" (Montant > 0)
             df_r = df_r[df_r["Montant Net"] > 0]
-            # 3. On supprime les lignes où il n'y a pas de Source
-            df_r = df_r[df_r["Source"] != ""]
             
         else:
+            # Structure vide par défaut
             df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
     except:
         df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
@@ -107,20 +105,18 @@ def load_user_data(user_email):
         df_c = pd.DataFrame(data_c)
         
         if not df_c.empty:
-            # Filtrage par utilisateur
             df_c = df_c[df_c["User"] == user_email]
 
-            # Correction virgule -> point
             if "Montant" in df_c.columns:
                 df_c["Montant"] = df_c["Montant"].astype(str).str.replace(",", ".", regex=False)
                 df_c["Montant"] = pd.to_numeric(df_c["Montant"], errors='coerce').fillna(0.0)
             
-            # --- NETTOYAGE CHARGES ---
-            df_c = df_c.drop_duplicates()
+            # Pour les charges, on évite quand même les doublons stricts (car c'est mensuel)
+            # Mais si vous voulez pouvoir mettre 2 fois "Loyer", enlevez la ligne ci-dessous :
+            df_c = df_c.drop_duplicates() 
             df_c = df_c[df_c["Montant"] > 0]
             
         if df_c.empty:
-            # Charges par défaut (seulement si vide)
             default_charges = [
                 ("EPARGNE", "Court Terme", "Livret A", 0, 1),
                 ("FIXES", "Logement", "Loyer", 0, 5),
