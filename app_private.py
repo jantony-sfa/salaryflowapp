@@ -57,12 +57,19 @@ def load_user_data(user_email):
         df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
 
     # CHARGEMENT CHARGES
-    try:
+   try:
         ws_c = sh.worksheet("CHARGES")
         data_c = ws_c.get_all_records()
         df_c = pd.DataFrame(data_c)
         if not df_c.empty:
+            # --- MODIFICATION POUR LA VIRGULE ---
+            # 1. On convertit en texte pour pouvoir manipuler
+            # 2. On remplace la virgule par un point
+            # 3. On convertit en nombre
+            df_c["Montant"] = df_c["Montant"].astype(str).str.replace(",", ".", regex=False)
             df_c["Montant"] = pd.to_numeric(df_c["Montant"], errors='coerce').fillna(0.0)
+            
+            # Filtrage utilisateur
             df_c = df_c[df_c["User"] == user_email]
         
         # Si nouvel utilisateur (pas de charges), on charge les défauts
