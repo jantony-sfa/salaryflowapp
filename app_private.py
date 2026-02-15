@@ -5,6 +5,36 @@ from datetime import datetime, timedelta
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+def update_revenus_cloud(user_email, df_cleaned):
+    """Ecrase les revenus de l'utilisateur avec la version corrigée"""
+    sh = get_db_connection()
+    ws = sh.worksheet("DATA")
+    
+    # 1. On récupère TOUT le fichier
+    all_records = ws.get_all_records()
+    
+    # 2. On garde les données des AUTRES utilisateurs (s'il y en a)
+    # On filtre pour ne garder que ce qui n'est PAS à toi
+    cleaned_data = [r for r in all_records if str(r.get("User")) != str(user_email)]
+    
+    # 3. On ajoute TES données corrigées
+    for _, row in df_cleaned.iterrows():
+        r = row.to_dict()
+        r["User"] = user_email
+        # Sécurisation des dates pour le JSON
+        r["Date"] = str(r["Date"])
+        r["Date Paiement"] = str(r["Date Paiement"])
+        cleaned_data.append(r)
+        
+    # 4. On écrase le Sheet avec la liste propre
+    ws.clear()
+    if cleaned_data:
+        headers = list(cleaned_data[0].keys())
+        ws.update([headers] + [list(d.values()) for d in cleaned_data])
+    else:
+        # Si tout est vide, on remet les titres
+        ws.append_row(["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
+        
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="SalaryFlow SaaS", page_icon="🚀", layout="wide")
 
@@ -332,6 +362,53 @@ if menu == "🔮 Tableau de Bord":
     if not df_tl.empty:
         st.dataframe(df_tl[["Jour", "Nom", "Type", "Montant", "Cumul"]].style.map(lambda x: 'color:#EF5350;font-weight:bold' if x<0 else 'color:#00E676;font-weight:bold', subset=['Cumul', 'Montant']).format("{:.2f} €", subset=['Montant', 'Cumul']), use_container_width=True, hide_index=True)
     else: st.info("Rien ce mois-ci.")
+
+# ... (Le code de ta Timeline existante est juste au dessus) ...
+
+    # --- NOUVELLE SECTION : GESTIONNAIRE D'HISTORIQUE ---
+    st.markdown("---")
+    st.subheader("🛠 Gestion & Corrections")
+    
+    with st.expander("📝 Modifier ou Supprimer des revenus (Nettoyage)", expanded=True):
+        st.info("Cochez les lignes à supprimer (touche 'Suppr' du clavier ou icône poubelle) ou modifiez les montants directement.")
+        
+        # On crée un éditeur puissant
+        edited_history = st.data_editor(
+            st.session_state['data_revenus'],
+            num_rows="dynamic", # Permet de supprimer des lignes !
+            use_container_width=True,
+            key="history_editor",
+            column_config={
+                "User": None, # On cache la colonne technique
+                "Montant Net": st.column_config.NumberColumn(
+                    "Net (€)", format="%.2f €", step=0.01
+                ),
+                "Date Paiement": st.column_config.DateColumn("Date Paiement", format="DD/MM/YYYY"),
+                "Source": st.column_config.TextColumn("Source (Client)"),
+            },
+            hide_index=True
+        )
+
+        col_save, col_info = st.columns([1, 3])
+        
+        if col_save.button("💾 Valider les corrections", type="primary"):
+            try:
+                # 1. Nettoyage technique des données éditées
+                if "Montant Net" in edited_history.columns:
+                    # Remplacement virgule et conversion
+                    edited_history["Montant Net"] = edited_history["Montant Net"].astype(str).str.replace(",", ".", regex=False)
+                    edited_history["Montant Net"] = pd.to_numeric(edited_history["Montant Net"], errors='coerce').fillna(0.0)
+                
+                # 2. Mise à jour Session State
+                st.session_state['data_revenus'] = edited_history
+                
+                # 3. Mise à jour Google Sheets (Cloud)
+                update_revenus_cloud(user, edited_history)
+                
+                st.success("✅ Nettoyage effectué ! Les doublons sont supprimés.")
+                st.rerun() # Recharge la page pour mettre à jour les graphiques
+            except Exception as e:
+                st.error(f"Erreur de sauvegarde : {e}")
 
 # --- PAGE 2 : AJOUT ---
 elif menu == "➕ Ajouter un revenu":
