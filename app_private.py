@@ -369,20 +369,40 @@ if menu == "🔮 Tableau de Bord":
     st.markdown("---")
     st.subheader("🛠 Gestion & Corrections")
     
+   # --- NOUVELLE SECTION : GESTIONNAIRE D'HISTORIQUE ---
+    st.markdown("---")
+    st.subheader("🛠 Gestion & Corrections")
+    
     with st.expander("📝 Modifier ou Supprimer des revenus (Nettoyage)", expanded=True):
-        st.info("Cochez les lignes à supprimer (touche 'Suppr' du clavier ou icône poubelle) ou modifiez les montants directement.")
+        st.info("Cochez les lignes à supprimer ou modifiez les montants.")
         
-        # On crée un éditeur puissant
+        # --- ETAPE DE SÉCURISATION (Correction du Bug API) ---
+        # On crée une copie pour ne pas casser l'original si ça plante
+        df_to_edit = st.session_state['data_revenus'].copy()
+        
+        if not df_to_edit.empty:
+            # 1. On force la colonne 'Date Paiement' à devenir une vraie DATE
+            df_to_edit["Date Paiement"] = pd.to_datetime(df_to_edit["Date Paiement"], dayfirst=True, errors='coerce')
+            
+            # 2. On force la colonne 'Montant Net' à devenir un vrai NOMBRE
+            # (On gère le cas où ce serait encore du texte avec une virgule)
+            if df_to_edit["Montant Net"].dtype == object: # Si c'est du texte
+                df_to_edit["Montant Net"] = df_to_edit["Montant Net"].astype(str).str.replace(",", ".", regex=False)
+                df_to_edit["Montant Net"] = pd.to_numeric(df_to_edit["Montant Net"], errors='coerce')
+        # -----------------------------------------------------
+
+        # On crée l'éditeur avec les données propres
         edited_history = st.data_editor(
-            st.session_state['data_revenus'],
-            num_rows="dynamic", # Permet de supprimer des lignes !
+            df_to_edit,
+            num_rows="dynamic",
             use_container_width=True,
             key="history_editor",
             column_config={
-                "User": None, # On cache la colonne technique
+                "User": None, # On cache l'user
                 "Montant Net": st.column_config.NumberColumn(
                     "Net (€)", format="%.2f €", step=0.01
                 ),
+                # Maintenant que c'est converti, DateColumn ne plantera plus !
                 "Date Paiement": st.column_config.DateColumn("Date Paiement", format="DD/MM/YYYY"),
                 "Source": st.column_config.TextColumn("Source (Client)"),
             },
@@ -393,20 +413,14 @@ if menu == "🔮 Tableau de Bord":
         
         if col_save.button("💾 Valider les corrections", type="primary"):
             try:
-                # 1. Nettoyage technique des données éditées
-                if "Montant Net" in edited_history.columns:
-                    # Remplacement virgule et conversion
-                    edited_history["Montant Net"] = edited_history["Montant Net"].astype(str).str.replace(",", ".", regex=False)
-                    edited_history["Montant Net"] = pd.to_numeric(edited_history["Montant Net"], errors='coerce').fillna(0.0)
-                
-                # 2. Mise à jour Session State
+                # Mise à jour Session State
                 st.session_state['data_revenus'] = edited_history
                 
-                # 3. Mise à jour Google Sheets (Cloud)
+                # Mise à jour Cloud
                 update_revenus_cloud(user, edited_history)
                 
-                st.success("✅ Nettoyage effectué ! Les doublons sont supprimés.")
-                st.rerun() # Recharge la page pour mettre à jour les graphiques
+                st.success("✅ Nettoyage effectué !")
+                st.rerun()
             except Exception as e:
                 st.error(f"Erreur de sauvegarde : {e}")
 
