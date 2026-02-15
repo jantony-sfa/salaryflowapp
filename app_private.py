@@ -339,12 +339,48 @@ elif menu == "➕ Ajouter un revenu":
 elif menu == "💳 Charges & Budgets":
     st.header("Mes Charges")
     st.info("Chaque modification est sauvegardée dans votre espace Cloud.")
-    edited = st.data_editor(st.session_state['data_charges'], num_rows="dynamic", use_container_width=True)
+    
+    # 1. Configuration de l'éditeur pour accepter les virgules et les centimes
+    edited = st.data_editor(
+        st.session_state['data_charges'],
+        num_rows="dynamic",
+        use_container_width=True,
+        column_config={
+            "Montant": st.column_config.NumberColumn(
+                "Montant (€)",
+                min_value=0.0,
+                max_value=10000.0,
+                step=0.01,  # C'est ça qui autorise les virgules/décimales !
+                format="%.2f €"
+            ),
+            "Jour": st.column_config.NumberColumn(
+                "Jour du mois",
+                min_value=1,
+                max_value=31,
+                step=1
+            ),
+            "Groupe": st.column_config.SelectboxColumn(
+                "Type",
+                options=["FIXES", "VARIABLES", "EPARGNE"]
+            )
+        }
+    )
     
     if st.button("☁️ Mettre à jour le Cloud", type="primary"):
         try:
+            # 2. NETTOYAGE MAGIQUE (Remplacement Virgule -> Point)
+            # On s'assure que tout est bien converti en chiffre pour le calcul
+            if "Montant" in edited.columns:
+                # On convertit en texte, on remplace la virgule, et on remet en chiffre
+                edited["Montant"] = edited["Montant"].astype(str).str.replace(",", ".", regex=False)
+                edited["Montant"] = pd.to_numeric(edited["Montant"], errors='coerce').fillna(0.0)
+
+            # 3. Sauvegarde
             save_charges_cloud(user, edited)
             st.session_state['data_charges'] = edited
             st.success("✅ Vos charges sont à jour !")
+            st.rerun() # Rafraichit la page pour afficher les bons totaux
+            
         except Exception as e:
+            st.error(f"Erreur : {e}")
             st.error(f"Erreur : {e}")
