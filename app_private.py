@@ -308,38 +308,102 @@ if menu == "🔮 Tableau de Bord":
 
     df_r, df_c = st.session_state['data_revenus'], st.session_state['data_charges']
     
-    # Calculs
-    in_month = 0.0
-    revenus_du_mois = pd.DataFrame()
-    if not df_r.empty:
-        revenus_du_mois = df_r[df_r["Mois Paiement"] == mois_str]
-        in_month = revenus_du_mois["Montant Net"].sum()
+    # ... (Tu es dans la section PAGE 1 : DASHBOARD, juste après les boutons Précédent/Suivant) ...
 
+    # =================================================================
+    # 🧠 MOTEUR DE CALCUL CENTRAL (KPIs + TIMELINE)
+    # =================================================================
+    
+    # 1. Récupération des données LIVE
+    df_r_live = st.session_state['data_revenus']
+    df_c_live = st.session_state['data_charges']
+    
+    # 2. Préparation des variables par défaut (pour éviter les crashs si vide)
+    mois_actuel_str = st.session_state['view_date'].strftime("%Y-%m")
+    revenus_du_mois = pd.DataFrame() # Vide par défaut
+    in_month = 0.0
+    
+    # 3. Calcul des REVENUS du mois
+    if not df_r_live.empty:
+        # On s'assure que la colonne existe
+        if "Mois Paiement" in df_r_live.columns:
+            revenus_du_mois = df_r_live[df_r_live["Mois Paiement"] == mois_actuel_str]
+            
+            # Calcul du total des entrées (sécurisé)
+            # On convertit en nombre au cas où ce serait du texte
+            revenus_du_mois["Montant Net"] = pd.to_numeric(revenus_du_mois["Montant Net"], errors='coerce').fillna(0.0)
+            in_month = revenus_du_mois["Montant Net"].sum()
+
+    # 4. Total Entrées (Revenus réels + Simulation)
     entree_totale = in_month + st.session_state['sim_val']
-    fixes = df_c[df_c["Groupe"]=="FIXES"]["Montant"].sum()
-    total_sorties = fixes + df_c[df_c["Groupe"]=="EPARGNE"]["Montant"].sum() + df_c[df_c["Groupe"]=="VARIABLES"]["Montant"].sum()
+    
+    # 5. Calcul des CHARGES (Fixes / Var / Epargne)
+    # On convertit tout en numérique d'un coup pour éviter les bugs
+    if not df_c_live.empty and "Montant" in df_c_live.columns:
+        df_c_live["Montant"] = pd.to_numeric(df_c_live["Montant"], errors='coerce').fillna(0.0)
+        
+        fixes = df_c_live[df_c_live["Groupe"]=="FIXES"]["Montant"].sum()
+        epargne = df_c_live[df_c_live["Groupe"]=="EPARGNE"]["Montant"].sum()
+        variables = df_c_live[df_c_live["Groupe"]=="VARIABLES"]["Montant"].sum()
+    else:
+        fixes, epargne, variables = 0.0, 0.0, 0.0
+
+    total_sorties = fixes + epargne + variables
+    
+    # 6. Résultats Finaux
     solde = entree_totale - total_sorties
     score = (entree_totale / fixes) if fixes > 0 else 0
-    
-    # Timeline
+
+    # =================================================================
+    # 🗓️ CONSTRUCTION DE LA TIMELINE
+    # =================================================================
     tl_data = []
-    for _, r in df_c.iterrows():
-        if r['Montant'] > 0: tl_data.append({"Jour": int(r['Jour']), "Nom": r['Intitule'], "Type": "Charge", "Montant": -r['Montant']})
+
+    # A. Ajout des CHARGES
+    for _, r in df_c_live.iterrows():
+        try:
+            if r['Montant'] > 0: 
+                tl_data.append({
+                    "Jour": int(r['Jour']), 
+                    "Nom": r['Intitule'], 
+                    "Type": "Charge", 
+                    "Montant": -float(r['Montant'])
+                })
+        except: pass
+
+    # B. Ajout des REVENUS (ceux filtrés plus haut)
     if not revenus_du_mois.empty:
         for _, r in revenus_du_mois.iterrows():
-            try: d = pd.to_datetime(r["Date Paiement"]).day
-            except: d = 1
-            tl_data.append({"Jour": d, "Nom": r["Source"], "Type": r["Type"], "Montant": r["Montant Net"]})
+            try:
+                # On essaie de lire la date proprement
+                d_obj = pd.to_datetime(r["Date Paiement"], dayfirst=True, errors='coerce')
+                montant = float(r["Montant Net"])
+                
+                if pd.notnull(d_obj) and montant > 0:
+                    tl_data.append({
+                        "Jour": d_obj.day, 
+                        "Nom": r["Source"], 
+                        "Type": "Revenu", 
+                        "Montant": montant
+                    })
+            except: pass
+
+    # C. Ajout de la SIMULATION
     if st.session_state['sim_val'] > 0: 
         tl_data.append({"Jour": 15, "Nom": "Simulation", "Type": "Sim", "Montant": st.session_state['sim_val']})
-            
+
+    # D. Finalisation du Tableau Timeline
     df_tl = pd.DataFrame(tl_data)
     if not df_tl.empty:
         df_tl = df_tl.sort_values("Jour")
         df_tl["Cumul"] = df_tl["Montant"].cumsum()
 
+    # =================================================================
+    # 🧠 ANALYSE DU COACH
+    # =================================================================
     etat, css, desc, conseils = analyser_situation(solde, score, df_tl)
 
+    # --- AFFICHAGE (Rien à changer en dessous) ---
     st.markdown(f"""<div class="status-banner {css}"> {etat} <br> <span style="font-size:0.9rem;">{desc}</span></div>""", unsafe_allow_html=True)
     
     col_g, col_k = st.columns([1, 2])
