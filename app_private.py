@@ -366,36 +366,41 @@ if menu == "🔮 Tableau de Bord":
     st.markdown("---")
     st.subheader("🛠 Gestion & Corrections")
     
-    with st.expander("📝 Modifier ou Supprimer des revenus (Nettoyage)", expanded=True):
-        st.info("Cochez les lignes à supprimer ou modifiez les montants.")
+    with st.expander("📝 Modifier, Supprimer ou Nettoyer", expanded=True):
         
-        # --- ETAPE DE SÉCURISATION (Correction du Bug API) ---
-        # On crée une copie pour ne pas casser l'original si ça plante
+        # --- 1. GESTION DE LA SIMULATION (INTEGRÉE ICI) ---
+        if st.session_state['sim_val'] > 0:
+            st.warning(f"⚠️ **Une simulation est active : {st.session_state['sim_val']} €**")
+            col_sim_txt, col_sim_btn = st.columns([3, 1])
+            col_sim_txt.info("Ce montant s'ajoute à vos calculs mais n'est pas enregistré.")
+            if col_sim_btn.button("🗑️ Supprimer la simulation", type="primary"):
+                st.session_state['sim_val'] = 0.0
+                st.rerun()
+            st.markdown("---") # Séparateur visuel
+        # --------------------------------------------------
+
+        st.info("Cochez les lignes du tableau ci-dessous pour les supprimer définitivement.")
+        
+        # SÉCURISATION DES DONNÉES AVANT AFFICHAGE
         df_to_edit = st.session_state['data_revenus'].copy()
         
         if not df_to_edit.empty:
-            # 1. On force la colonne 'Date Paiement' à devenir une vraie DATE
+            # Conversion forcée en DATE et NOMBRE pour éviter les bugs
             df_to_edit["Date Paiement"] = pd.to_datetime(df_to_edit["Date Paiement"], dayfirst=True, errors='coerce')
             
-            # 2. On force la colonne 'Montant Net' à devenir un vrai NOMBRE
-            # (On gère le cas où ce serait encore du texte avec une virgule)
-            if df_to_edit["Montant Net"].dtype == object: # Si c'est du texte
+            if df_to_edit["Montant Net"].dtype == object:
                 df_to_edit["Montant Net"] = df_to_edit["Montant Net"].astype(str).str.replace(",", ".", regex=False)
                 df_to_edit["Montant Net"] = pd.to_numeric(df_to_edit["Montant Net"], errors='coerce')
-        # -----------------------------------------------------
 
-        # On crée l'éditeur avec les données propres
+        # TABLEAU ÉDITABLE
         edited_history = st.data_editor(
             df_to_edit,
             num_rows="dynamic",
             use_container_width=True,
             key="history_editor",
             column_config={
-                "User": None, # On cache l'user
-                "Montant Net": st.column_config.NumberColumn(
-                    "Net (€)", format="%.2f €", step=0.01
-                ),
-                # Maintenant que c'est converti, DateColumn ne plantera plus !
+                "User": None, 
+                "Montant Net": st.column_config.NumberColumn("Net (€)", format="%.2f €", step=0.01),
                 "Date Paiement": st.column_config.DateColumn("Date Paiement", format="DD/MM/YYYY"),
                 "Source": st.column_config.TextColumn("Source (Client)"),
             },
@@ -406,13 +411,12 @@ if menu == "🔮 Tableau de Bord":
         
         if col_save.button("💾 Valider les corrections", type="primary"):
             try:
-                # Mise à jour Session State
+                # Mise à jour Session
                 st.session_state['data_revenus'] = edited_history
-                
                 # Mise à jour Cloud
                 update_revenus_cloud(user, edited_history)
                 
-                st.success("✅ Nettoyage effectué !")
+                st.success("✅ Données mises à jour !")
                 st.rerun()
             except Exception as e:
                 st.error(f"Erreur de sauvegarde : {e}")
