@@ -61,6 +61,7 @@ st.markdown("""
     .status-bad { background-color: #EF5350; }
     </style>
     """, unsafe_allow_html=True)
+
 # --- 3. CONNEXION DATABASE (GOOGLE SHEETS) ---
 @st.cache_resource
 def get_db_connection():
@@ -361,10 +362,6 @@ if menu == "🔮 Tableau de Bord":
 
 # ... (Le code de ta Timeline existante est juste au dessus) ...
 
-    # --- NOUVELLE SECTION : GESTIONNAIRE D'HISTORIQUE ---
-    st.markdown("---")
-    st.subheader("🛠 Gestion & Corrections")
-    
    # --- NOUVELLE SECTION : GESTIONNAIRE D'HISTORIQUE ---
     st.markdown("---")
     st.subheader("🛠 Gestion & Corrections")
