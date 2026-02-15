@@ -195,7 +195,7 @@ with st.sidebar:
         st.rerun()
         
     st.markdown("---")
-    menu = st.radio("Menu", ["🔮 Tableau de Bord", "➕ Ajout Revenu", "💳 Charges & Budgets"])
+    menu = st.radio("Menu", ["🔮 Tableau de Bord", "➕ Ajouter un revenu", "💳 Charges & Budgets"])
     
     st.markdown("---")
     val_sim = st.number_input("Simuler entrée (€)", value=float(st.session_state['sim_val']), step=50.0)
@@ -274,11 +274,11 @@ if menu == "🔮 Tableau de Bord":
     else: st.info("Rien ce mois-ci.")
 
 # --- PAGE 2 : AJOUT ---
-elif menu == "➕ Ajout Revenu":
+elif menu == "➕ Ajouter un revenu":
     st.header("Nouvelle Rentrée")
     c1, c2 = st.columns(2)
     source = c1.text_input("Source")
-    typ = c2.selectbox("Type", ["Intérim", "Micro-Entreprise", "Salaire", "Autre"])
+    typ = c2.selectbox("Type", ["Intérim", "Micro-Entreprise", "Salaire", "Chomâge", "APL", "Prime d'activité", "Remboursements", "Autre"])
     
     label_date = "Date de la mission" if typ in ["Intérim", "Micro-Entreprise"] else "Date de versement"
     date_mission = st.date_input(label_date, datetime.now())
