@@ -181,10 +181,41 @@ def save_charges_cloud(user_email, df_charges):
         # Juste l'en-tête si vide
         ws.append_row(["User", "Groupe", "Sous-Groupe", "Intitule", "Montant", "Jour"])
 
-def update_user_revenus_cloud(user_email, df_revenus):
-    """Met à jour TOUS les revenus de l'utilisateur (Correction/Suppression)"""
+def update_revenus_cloud(user_email, df_cleaned):
+    """Ecrase les revenus en forçant le format numérique propre"""
     sh = get_db_connection()
     ws = sh.worksheet("DATA")
+    
+    all_records = ws.get_all_records()
+    other_users_data = [r for r in all_records if str(r.get("User")) != str(user_email)]
+    
+    new_user_data = []
+    for _, row in df_cleaned.iterrows():
+        r = row.to_dict()
+        r["User"] = user_email
+        
+        # --- FIX MAGIQUE POUR LE MONTANT ---
+        val = str(r["Montant Net"])
+        # On remplace la virgule par un point
+        val = val.replace(',', '.')
+        # On convertit en float propre, puis on arrondit à 2 décimales
+        try:
+            r["Montant Net"] = round(float(val), 2)
+        except:
+            r["Montant Net"] = 0.0
+            
+        r["Date"] = str(r["Date"])
+        r["Date Paiement"] = str(r["Date Paiement"])
+        new_user_data.append(r)
+        
+    final_data = other_users_data + new_user_data
+    
+    ws.clear()
+    if final_data:
+        headers = list(final_data[0].keys())
+        ws.update([headers] + [list(d.values()) for d in final_data])
+    else:
+        ws.append_row(["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
     
     # 1. Récupérer toutes les données du Sheet
     all_data = ws.get_all_records()
