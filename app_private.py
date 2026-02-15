@@ -236,16 +236,18 @@ if 'user_email' not in st.session_state:
 # --- 5. INITIALISATION SESSION ---
 user = st.session_state['user_email']
 
-# Chargement des données au démarrage
+# Cette condition est CRUCIALE : elle empêche de recharger si c'est déjà fait
 if 'data_loaded' not in st.session_state:
-    with st.spinner('Chargement de vos données depuis le Cloud...'):
-        st.session_state['data_revenus'], st.session_state['data_charges'] = load_user_data(user)
+    with st.spinner('Synchronisation Cloud...'):
+        # On charge depuis le Cloud
+        df_cloud_r, df_cloud_c = load_user_data(user)
+        
+        # On ÉCRASE ce qu'il y a en mémoire (au lieu d'ajouter)
+        st.session_state['data_revenus'] = df_cloud_r
+        st.session_state['data_charges'] = df_cloud_c
+        
+        # On marque comme chargé pour ne plus y toucher
         st.session_state['data_loaded'] = True
-
-if 'view_date' not in st.session_state:
-    st.session_state['view_date'] = datetime.now().replace(day=1)
-if 'sim_val' not in st.session_state: 
-    st.session_state['sim_val'] = 0.0
 
 # --- 6. MOTEUR & INTELLIGENCE ---
 def calculer_net(type_c, taux, heures, paniers, charges_pct):
