@@ -72,32 +72,20 @@ def get_db_connection():
 
 def load_user_data(user_email):
     sh = get_db_connection()
+    # ... (accès au worksheet DATA) ...
+    data_r = ws_r.get_all_records()
+    df_r = pd.DataFrame(data_r)
     
-    # --- 1. CHARGEMENT REVENUS ---
-    try:
-        ws_r = sh.worksheet("DATA")
-        data_r = ws_r.get_all_records()
-        df_r = pd.DataFrame(data_r)
+    if not df_r.empty:
+        df_r = df_r[df_r["User"] == user_email]
         
-        if not df_r.empty:
-            # Filtrage par utilisateur
-            df_r = df_r[df_r["User"] == user_email]
-            
-            # Correction virgule -> point (Sécurité)
-            if "Montant Net" in df_r.columns:
-                df_r["Montant Net"] = df_r["Montant Net"].astype(str).str.replace(",", ".", regex=False)
-                df_r["Montant Net"] = pd.to_numeric(df_r["Montant Net"], errors='coerce').fillna(0.0)
-            
-            # --- NETTOYAGE LIGHT (Permissif) ---
-            # On ne supprime PLUS les doublons (drop_duplicates retiré)
-            # On garde juste ce qui est "réel" (Montant > 0)
-            df_r = df_r[df_r["Montant Net"] > 0]
-            
-        else:
-            # Structure vide par défaut
-            df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
-    except:
-        df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
+        # SÉCURITÉ CRITIQUE : Conversion propre
+        # On s'assure que le Montant Net est bien traité comme un chiffre
+        df_r["Montant Net"] = df_r["Montant Net"].apply(lambda x: str(x).replace(',', '.'))
+        df_r["Montant Net"] = pd.to_numeric(df_r["Montant Net"], errors='coerce').fillna(0.0)
+        
+        # On garde les doublons (pour tes missions multiples)
+        # On ne touche à rien d'autre
 
     # --- 2. CHARGEMENT CHARGES ---
     try:
