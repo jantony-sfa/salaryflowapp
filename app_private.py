@@ -72,20 +72,66 @@ def get_db_connection():
 
 def load_user_data(user_email):
     sh = get_db_connection()
-    # ... (accès au worksheet DATA) ...
-    data_r = ws_r.get_all_records()
-    df_r = pd.DataFrame(data_r)
     
-    if not df_r.empty:
-        df_r = df_r[df_r["User"] == user_email]
+    # --- 1. CHARGEMENT REVENUS ---
+    try:
+        # ON DÉFINIT LA FEUILLE (C'est ce qui manquait !)
+        ws_r = sh.worksheet("DATA")
+        data_r = ws_r.get_all_records()
+        df_r = pd.DataFrame(data_r)
         
-        # SÉCURITÉ CRITIQUE : Conversion propre
-        # On s'assure que le Montant Net est bien traité comme un chiffre
-        df_r["Montant Net"] = df_r["Montant Net"].apply(lambda x: str(x).replace(',', '.'))
-        df_r["Montant Net"] = pd.to_numeric(df_r["Montant Net"], errors='coerce').fillna(0.0)
+        if not df_r.empty:
+            # Filtrage par utilisateur
+            df_r = df_r[df_r["User"] == user_email]
+            
+            # FIX ANTI-GONFLEMENT : Nettoyage des virgules et conversion
+            # On transforme tout en texte, on remplace la virgule par un point, 
+            # et on convertit en nombre réel.
+            df_r["Montant Net"] = df_r["Montant Net"].astype(str).str.replace(',', '.', regex=False)
+            df_r["Montant Net"] = pd.to_numeric(df_r["Montant Net"], errors='coerce').fillna(0.0)
+            
+            # Suppression des lignes fantômes (montant 0 ou vide)
+            df_r = df_r[df_r["Montant Net"] > 0]
+        else:
+            df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
+    except Exception as e:
+        st.error(f"Erreur technique Revenus: {e}")
+        df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
+
+    # --- 2. CHARGEMENT CHARGES ---
+    try:
+        ws_c = sh.worksheet("CHARGES")
+        data_c = ws_c.get_all_records()
+        df_c = pd.DataFrame(data_c)
         
-        # On garde les doublons (pour tes missions multiples)
-        # On ne touche à rien d'autre
+        if not df_c.empty:
+            df_c = df_c[df_c["User"] == user_email]
+            # Même fix pour les charges
+            df_c["Montant"] = df_c["Montant"].astype(str).str.replace(',', '.', regex=False)
+            df_c["Montant"] = pd.to_numeric(df_c["Montant"], errors='coerce').fillna(0.0)
+        
+        if df_c.empty:
+            # Ton bloc de charges par défaut reste ici...
+            default_charges = [
+                ("EPARGNE", "Court Terme", "Livret A", 0, 1),
+                ("FIXES", "Logement", "Loyer", 0, 5),
+                ("FIXES", "Logement", "Energie/Eau", 0, 15),
+                ("FIXES", "Logement", "Internet", 0, 10),
+                ("FIXES", "Transport", "Abonnement TBM", 0, 5),
+                ("FIXES", "Abonnements", "Spotify", 0, 10),
+                ("FIXES", "Abonnements", "Téléphone", 0, 10),
+                ("FIXES", "Banque", "Frais Bancaires", 0, 1),
+                ("VARIABLES", "Plaisir", "Restos / Sorties", 0, 20),
+                ("VARIABLES", "Beauté", "Ongles / Esthétique", 0, 15),
+                ("VARIABLES", "Animaux", "Véto / Croquettes", 0, 20),
+            ]
+            df_c = pd.DataFrame(default_charges, columns=["Groupe", "Sous-Groupe", "Intitule", "Montant", "Jour"])
+            df_c["User"] = user_email
+    except Exception as e:
+        st.error(f"Erreur technique Charges: {e}")
+        df_c = pd.DataFrame()
+
+    return df_r, df_c
 
     # --- 2. CHARGEMENT CHARGES ---
     try:
