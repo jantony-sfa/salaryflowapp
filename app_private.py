@@ -42,38 +42,42 @@ def get_db_connection():
 def load_user_data(user_email):
     sh = get_db_connection()
     
-    # CHARGEMENT REVENUS
+    # --- 1. CHARGEMENT REVENUS ---
     try:
         ws_r = sh.worksheet("DATA")
         data_r = ws_r.get_all_records()
         df_r = pd.DataFrame(data_r)
+        
         if not df_r.empty:
-            # Conversion numérique de sécurité
-            df_r["Montant Net"] = pd.to_numeric(df_r["Montant Net"], errors='coerce').fillna(0.0)
+            # Correction virgule -> point pour éviter les bugs
+            if "Montant Net" in df_r.columns:
+                df_r["Montant Net"] = df_r["Montant Net"].astype(str).str.replace(",", ".", regex=False)
+                df_r["Montant Net"] = pd.to_numeric(df_r["Montant Net"], errors='coerce').fillna(0.0)
+            
+            # Filtrage par utilisateur
             df_r = df_r[df_r["User"] == user_email]
         else:
             df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
     except:
         df_r = pd.DataFrame(columns=["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
 
-    # CHARGEMENT CHARGES
-
-   try:
+    # --- 2. CHARGEMENT CHARGES ---
+    try:
         ws_c = sh.worksheet("CHARGES")
         data_c = ws_c.get_all_records()
         df_c = pd.DataFrame(data_c)
+        
         if not df_c.empty:
-            # --- MODIFICATION POUR LA VIRGULE ---
-            # 1. On convertit en texte pour pouvoir manipuler
-            # 2. On remplace la virgule par un point
-            # 3. On convertit en nombre
-            df_c["Montant"] = df_c["Montant"].astype(str).str.replace(",", ".", regex=False)
-            df_c["Montant"] = pd.to_numeric(df_c["Montant"], errors='coerce').fillna(0.0)
+            # --- ICI C'EST LA CORRECTION MAGIQUE ---
+            # On remplace les virgules par des points AVANT de convertir en nombre
+            if "Montant" in df_c.columns:
+                df_c["Montant"] = df_c["Montant"].astype(str).str.replace(",", ".", regex=False)
+                df_c["Montant"] = pd.to_numeric(df_c["Montant"], errors='coerce').fillna(0.0)
             
-            # Filtrage utilisateur
+            # Filtrage par utilisateur
             df_c = df_c[df_c["User"] == user_email]
         
-        # Si nouvel utilisateur (pas de charges), on charge les défauts
+        # Charges par défaut si vide (nouvel utilisateur)
         if df_c.empty:
             default_charges = [
                 ("EPARGNE", "Court Terme", "Livret A", 0, 1),
