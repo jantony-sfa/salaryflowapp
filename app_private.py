@@ -11,15 +11,26 @@ st.set_page_config(page_title="SalaryFlow SaaS", page_icon="🚀", layout="wide"
 # --- 2. CSS ---
 st.markdown("""
     <style>
+    /* 1. Masquer le menu Hamburger (les 3 traits) */
+    #MainMenu {visibility: hidden;}
+    
+    /* 2. Masquer le bouton 'Deploy' et les décorations du haut */
+    .stDeployButton {display:none;}
+    header {visibility: hidden;}
+    
+    /* 3. Masquer le footer 'Made with Streamlit' */
+    footer {visibility: hidden;}
+
+    /* 4. Masquer la barre d'outils si elle apparait encore */
+    [data-testid="stToolbar"] {visibility: hidden;}
+
+    /* TES STYLES PERSO */
     .status-banner { padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; color: white; font-weight: bold; font-size: 1.2rem; }
     .status-ok { background-color: #00E676; }
     .status-warn { background-color: #FFA726; }
     .status-bad { background-color: #EF5350; }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
-
 # --- 3. CONNEXION DATABASE (GOOGLE SHEETS) ---
 @st.cache_resource
 def get_db_connection():
