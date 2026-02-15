@@ -527,10 +527,23 @@ if menu == "🔮 Tableau de Bord":
         st.markdown("### 🧠 Coach")
         for c in conseils: st.markdown(f"<div class='coach-text'>{c}</div>", unsafe_allow_html=True)
 
-    st.markdown("### 🗓️ Timeline")
+  # --- AFFICHAGE TIMELINE FORMATÉ ---
+    st.markdown("### 🗓️ Timeline de Trésorerie")
     if not df_tl.empty:
-        st.dataframe(df_tl[["Jour", "Nom", "Type", "Montant", "Cumul"]].style.map(lambda x: 'color:#EF5350;font-weight:bold' if x<0 else 'color:#00E676;font-weight:bold', subset=['Cumul', 'Montant']).format("{:.2f} €", subset=['Montant', 'Cumul']), use_container_width=True, hide_index=True)
-    else: st.info("Rien ce mois-ci.")
+        # On définit le style et le formatage
+        st.dataframe(
+            df_tl[["Jour", "Nom", "Type", "Montant", "Cumul"]].style.map(
+                lambda x: 'color:#EF5350;font-weight:bold' if x < 0 else 'color:#00E676;font-weight:bold', 
+                subset=['Cumul', 'Montant']
+            ).format({
+                "Montant": "{:.2f} €", # Affiche 145.57 €
+                "Cumul": "{:.2f} €"
+            }, decimal='.'), # <--- FORCE LE POINT ICI
+            use_container_width=True, 
+            hide_index=True
+        )
+    else: 
+        st.info("Aucune opération prévue sur ce mois.")
 
 # ... (Le code de ta Timeline existante est juste au dessus) ...
 
