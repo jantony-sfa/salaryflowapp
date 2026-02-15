@@ -142,7 +142,43 @@ def save_charges_cloud(user_email, df_charges):
         # Juste l'en-tête si vide
         ws.append_row(["User", "Groupe", "Sous-Groupe", "Intitule", "Montant", "Jour"])
 
+def update_user_revenus_cloud(user_email, df_revenus):
+    """Met à jour TOUS les revenus de l'utilisateur (Correction/Suppression)"""
+    sh = get_db_connection()
+    ws = sh.worksheet("DATA")
+    
+    # 1. Récupérer toutes les données du Sheet
+    all_data = ws.get_all_records()
+    
+    # 2. Garder tout ce qui n'est PAS à l'utilisateur actuel (les autres clients)
+    # Si le sheet est vide ou n'a pas de colonne User, on gère l'erreur
+    try:
+        other_users_data = [row for row in all_data if str(row.get('User')) != str(user_email)]
+    except:
+        other_users_data = []
 
+    # 3. Préparer les nouvelles données de l'utilisateur
+    new_user_data = []
+    for _, row in df_revenus.iterrows():
+        r = row.to_dict()
+        r['User'] = user_email # On s'assure que le mail est bien là
+        # On force la conversion en string pour éviter les bugs JSON
+        r['Date'] = str(r['Date'])
+        r['Date Paiement'] = str(r['Date Paiement'])
+        new_user_data.append(r)
+        
+    # 4. Fusionner et Réécrire
+    final_data = other_users_data + new_user_data
+    
+    ws.clear()
+    if final_data:
+        headers = list(final_data[0].keys())
+        # Astuce : on réécrit tout
+        ws.update([headers] + [list(d.values()) for d in final_data])
+    else:
+        # Remettre les en-têtes si tout est vide
+        ws.append_row(["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
+        
 # --- 4. LOGIN SYSTEM (Email = ID) ---
 if 'user_email' not in st.session_state:
     col_log1, col_log2, col_log3 = st.columns([1,2,1])
