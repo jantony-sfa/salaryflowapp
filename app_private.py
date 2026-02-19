@@ -608,6 +608,15 @@ if menu == "🔮 Tableau de Bord":
 # --- PAGE 2 : AJOUT ---
 elif menu == "➕ Ajouter un revenu":
     st.header("Nouvelle Rentrée")
+    
+    # 🚨 LA FONCTION MAGIQUE QUI RÈGLE LE PROBLÈME DES VIRGULES 🚨
+    def nettoyer_chiffre(valeur):
+        try:
+            # Remplace la virgule par un point et convertit en vrai nombre
+            return float(str(valeur).replace(',', '.').replace(' ', ''))
+        except ValueError:
+            return 0.0
+
     c1, c2 = st.columns(2)
     source = c1.text_input("Source")
     typ = c2.selectbox("Type", ["Intérim", "Micro-Entreprise", "Salaire", "Chomâge", "APL", "Prime d'activité", "Remboursements", "Autre"])
@@ -621,10 +630,10 @@ elif menu == "➕ Ajouter un revenu":
     
     if typ == "Intérim":
         cc1, cc2, cc3 = st.columns(3)
-        # AJOUT DE format="%.2f" et value=0.0
-        taux = cc1.number_input("Taux", value=0.0, step=0.5, format="%.2f")
-        heures = cc2.number_input("Heures", value=0.0, step=1.0, format="%.2f")
-        paniers = cc3.number_input("Paniers (€)", value=0.0, step=1.0, format="%.2f")
+        # On utilise text_input et on nettoie le résultat !
+        taux = nettoyer_chiffre(cc1.text_input("Taux", "0.00"))
+        heures = nettoyer_chiffre(cc2.text_input("Heures", "0.00"))
+        paniers = nettoyer_chiffre(cc3.text_input("Paniers (€)", "0.00"))
         
         montant_final = calculer_net("Intérim", taux, heures, paniers, 0)
         st.write(f"**Net : {montant_final:.2f} €**")
@@ -634,19 +643,17 @@ elif menu == "➕ Ajouter un revenu":
         
     elif typ == "Micro-Entreprise":
         cc1, cc2, cc3, cc4 = st.columns(4)
-        # AJOUT DE format="%.2f"
-        taux = cc1.number_input("Taux/CA", value=0.0, step=1.0, format="%.2f")
-        heures = cc2.number_input("Qté/Jours", value=1.0, step=1.0, format="%.2f")
-        paniers = cc3.number_input("Frais (€)", value=0.0, step=1.0, format="%.2f")
-        charges = cc4.number_input("% Charges", value=21.2, step=0.1, format="%.2f")
+        taux = nettoyer_chiffre(cc1.text_input("Taux/CA", "0.00"))
+        heures = nettoyer_chiffre(cc2.text_input("Qté/Jours", "1.00"))
+        paniers = nettoyer_chiffre(cc3.text_input("Frais (€)", "0.00"))
+        charges = nettoyer_chiffre(cc4.text_input("% Charges", "21.20"))
         
         d_pay = st.date_input("Date Paiement", value=date_mission + timedelta(days=30))
         montant_final = calculer_net("Autre", taux, heures, paniers, charges)
         st.write(f"**Net : {montant_final:.2f} €**")
         
     else:
-        # AJOUT DE format="%.2f"
-        montant_final = st.number_input("Net (€)", value=0.0, step=10.0, format="%.2f")
+        montant_final = nettoyer_chiffre(st.text_input("Net (€)", "0.00"))
 
     if st.button("Valider et Sauvegarder", type="primary"):
         new = {"Date": date_mission.strftime("%d/%m/%Y"), "Mois": date_mission.strftime("%Y-%m"), "Source": source, "Type": typ, "Détails": "App", "Montant Net": montant_final, "Date Paiement": d_pay.strftime("%Y-%m-%d"), "Mois Paiement": d_pay.strftime("%Y-%m")}
