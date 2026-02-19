@@ -56,16 +56,18 @@ st.set_page_config(page_title="SalaryFlow SaaS", page_icon="🚀", layout="wide"
 # --- 2. CSS ---
 st.markdown("""
     <style>
-    /* 1. ARTILLERIE LOURDE : Cache les icônes Cloud (Share, Git, Etoiles, Crayon) */
-    .viewerBadge_container {display: none !important;}
-    .viewerBadge_link {display: none !important;}
-    [data-testid="stToolbar"] {display: none !important;}
-    
-    /* 3. Cache le pied de page */
-    footer {display: none !important;}
+    /* 1. DÉTRUIRE TOUT LE CÔTÉ DROIT DE L'EN-TÊTE (Boutons, Menu, Deploy) */
+    header[data-testid="stHeader"] > div:nth-child(2) {
+        display: none !important;
+    }
 
-    /* 4. ON TOUCHE PAS AU HEADER POUR GARDER LA FLÈCHE DE GAUCHE */
-    header {background-color: !important;}
+    /* 2. DÉTRUIRE LE BADGE FLOTTANT STREAMLIT CLOUD (Share, GitHub, Etoiles) */
+    .viewerBadge_container, .viewerBadge_link, .st-emotion-cache-1wbqy5l {
+        display: none !important;
+    }
+    
+    /* 3. DÉTRUIRE LE FOOTER */
+    footer {display: none !important;}
 
     /* TES STYLES PERSOS (Coach) */
     .status-banner { padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; color: white; font-weight: bold; font-size: 1.2rem; }
