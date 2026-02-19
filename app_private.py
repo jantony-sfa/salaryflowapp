@@ -61,11 +61,6 @@ st.markdown("""
     .viewerBadge_link {display: none !important;}
     [data-testid="stToolbar"] {display: none !important;}
     
-    /* 2. Cache le menu classique et le bouton Deploy */
-    [data-testid="stHeaderActionElements"] {display: none !important;}
-    .stAppDeployButton {display: none !important;}
-    #MainMenu {display: none !important;}
-    
     /* 3. Cache le pied de page */
     footer {display: none !important;}
 
