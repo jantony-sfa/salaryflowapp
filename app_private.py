@@ -65,7 +65,7 @@ st.markdown("""
     footer {display: none !important;}
 
     /* 4. ON TOUCHE PAS AU HEADER POUR GARDER LA FLÈCHE DE GAUCHE */
-    header {background-color: transparent !important;}
+    header {background-color: !important;}
 
     /* TES STYLES PERSOS (Coach) */
     .status-banner { padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; color: white; font-weight: bold; font-size: 1.2rem; }
