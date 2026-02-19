@@ -658,7 +658,6 @@ elif menu == "➕ Ajouter un revenu":
     if st.button("Valider et Sauvegarder", type="primary"):
         # On force la conversion en texte avec virgule pour Google Sheets
         montant_final_str = str(round(montant_final, 2)).replace('.', ',')
-        
         new = {"Date": date_mission.strftime("%d/%m/%Y"), "Mois": date_mission.strftime("%Y-%m"), "Source": source, "Type": typ, "Détails": "App", "Montant Net": montant_final, "Date Paiement": d_pay.strftime("%Y-%m-%d"), "Mois Paiement": d_pay.strftime("%Y-%m")}
         
         # SAUVEGARDE GOOGLE SHEETS
