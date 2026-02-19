@@ -621,9 +621,11 @@ elif menu == "➕ Ajouter un revenu":
     
     if typ == "Intérim":
         cc1, cc2, cc3 = st.columns(3)
-        taux = cc1.number_input("Taux", 0.0)
-        heures = cc2.number_input("Heures", 0.0)
-        paniers = cc3.number_input("Paniers (€)", 0.0)
+        # AJOUT DE format="%.2f" et value=0.0
+        taux = cc1.number_input("Taux", value=0.0, step=0.5, format="%.2f")
+        heures = cc2.number_input("Heures", value=0.0, step=1.0, format="%.2f")
+        paniers = cc3.number_input("Paniers (€)", value=0.0, step=1.0, format="%.2f")
+        
         montant_final = calculer_net("Intérim", taux, heures, paniers, 0)
         st.write(f"**Net : {montant_final:.2f} €**")
         if date_mission.month == 12: d_pay = datetime(date_mission.year + 1, 1, 12)
@@ -632,16 +634,19 @@ elif menu == "➕ Ajouter un revenu":
         
     elif typ == "Micro-Entreprise":
         cc1, cc2, cc3, cc4 = st.columns(4)
-        taux = cc1.number_input("Taux/CA", 0.0)
-        heures = cc2.number_input("Qté/Jours", 1.0)
-        paniers = cc3.number_input("Frais (€)", 0.0)
-        charges = cc4.number_input("% Charges", 21.2)
+        # AJOUT DE format="%.2f"
+        taux = cc1.number_input("Taux/CA", value=0.0, step=1.0, format="%.2f")
+        heures = cc2.number_input("Qté/Jours", value=1.0, step=1.0, format="%.2f")
+        paniers = cc3.number_input("Frais (€)", value=0.0, step=1.0, format="%.2f")
+        charges = cc4.number_input("% Charges", value=21.2, step=0.1, format="%.2f")
+        
         d_pay = st.date_input("Date Paiement", value=date_mission + timedelta(days=30))
         montant_final = calculer_net("Autre", taux, heures, paniers, charges)
         st.write(f"**Net : {montant_final:.2f} €**")
         
     else:
-        montant_final = st.number_input("Net (€)", 0.0)
+        # AJOUT DE format="%.2f"
+        montant_final = st.number_input("Net (€)", value=0.0, step=10.0, format="%.2f")
 
     if st.button("Valider et Sauvegarder", type="primary"):
         new = {"Date": date_mission.strftime("%d/%m/%Y"), "Mois": date_mission.strftime("%Y-%m"), "Source": source, "Type": typ, "Détails": "App", "Montant Net": montant_final, "Date Paiement": d_pay.strftime("%Y-%m-%d"), "Mois Paiement": d_pay.strftime("%Y-%m")}
