@@ -56,14 +56,21 @@ st.set_page_config(page_title="SalaryFlow SaaS", page_icon="🚀", layout="wide"
 # --- 2. CSS ---
 st.markdown("""
     <style>
-    /* 1. Rendre le menu principal (les 3 points) invisible */
-    #MainMenu {visibility: hidden;}
+    /* 1. ARTILLERIE LOURDE : Cache les icônes Cloud (Share, Git, Etoiles, Crayon) */
+    .viewerBadge_container {display: none !important;}
+    .viewerBadge_link {display: none !important;}
+    [data-testid="stToolbar"] {display: none !important;}
     
-    /* 2. Rendre le bouton Deploy invisible */
-    .stAppDeployButton {display: none;}
+    /* 2. Cache le menu classique et le bouton Deploy */
+    [data-testid="stHeaderActionElements"] {display: none !important;}
+    .stAppDeployButton {display: none !important;}
+    #MainMenu {display: none !important;}
     
-    /* 3. Rendre le footer invisible */
-    footer {visibility: hidden;}
+    /* 3. Cache le pied de page */
+    footer {display: none !important;}
+
+    /* 4. ON TOUCHE PAS AU HEADER POUR GARDER LA FLÈCHE DE GAUCHE */
+    header {background-color: transparent !important;}
 
     /* TES STYLES PERSOS (Coach) */
     .status-banner { padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; color: white; font-weight: bold; font-size: 1.2rem; }
