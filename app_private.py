@@ -56,21 +56,16 @@ st.set_page_config(page_title="SalaryFlow SaaS", page_icon="🚀", layout="wide"
 # --- 2. CSS ---
 st.markdown("""
     <style>
-    /* 1. Masquer TOUT le bloc de boutons en haut à droite (Deploy, Menu, etc.) */
-    [data-testid="stHeaderActionElements"] {display: none;}
-    [data-testid="stAppDeployButton"] {display: none;}
-    
-    /* 2. Double sécurité pour les anciens noms de code Streamlit */
+    /* 1. Rendre le menu principal (les 3 points) invisible */
     #MainMenu {visibility: hidden;}
-    .stDeployButton {display:none;}
     
-    /* 3. Masquer le footer 'Made with Streamlit' */
+    /* 2. Rendre le bouton Deploy invisible */
+    .stAppDeployButton {display: none;}
+    
+    /* 3. Rendre le footer invisible */
     footer {visibility: hidden;}
 
-    /* 4. On s'assure que le header reste transparent mais actif pour garder la flèche */
-    header {background-color: transparent !important;}
-
-    /* 5. Tes styles persos (Coach) */
+    /* TES STYLES PERSOS (Coach) */
     .status-banner { padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; color: white; font-weight: bold; font-size: 1.2rem; }
     .status-ok { background-color: #00E676; }
     .status-warn { background-color: #FFA726; }
