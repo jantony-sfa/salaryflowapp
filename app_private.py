@@ -56,21 +56,18 @@ st.set_page_config(page_title="SalaryFlow SaaS", page_icon="🚀", layout="wide"
 # --- 2. CSS ---
 st.markdown("""
     <style>
-    /* 1. Masquer le menu Hamburger (les 3 traits) */
+    /* 1. Masquer le menu Streamlit en haut à droite (Hamburger) */
     #MainMenu {visibility: hidden;}
     
     /* 2. Masquer le bouton 'Deploy' */
     .stDeployButton {display:none;}
-    /* On NE MASQUE PLUS le header entier pour garder la flèche de la sidebar */
-    /* header {visibility: hidden;} */
     
     /* 3. Masquer le footer 'Made with Streamlit' */
     footer {visibility: hidden;}
 
-    /* 4. Masquer la barre d'outils si elle apparait encore */
-    [data-testid="stToolbar"] {visibility: hidden;}
+    /* 🚨 ATTENTION : ON NE CACHE PAS LE HEADER ICI, SINON LA FLÈCHE DISPARAÎT ! 🚨 */
 
-    /* TES STYLES PERSO */
+    /* 4. Tes styles pour tes bannières de Coach */
     .status-banner { padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; color: white; font-weight: bold; font-size: 1.2rem; }
     .status-ok { background-color: #00E676; }
     .status-warn { background-color: #FFA726; }
