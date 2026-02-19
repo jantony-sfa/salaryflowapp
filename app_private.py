@@ -56,25 +56,27 @@ st.set_page_config(page_title="SalaryFlow SaaS", page_icon="🚀", layout="wide"
 # --- 2. CSS ---
 st.markdown("""
     <style>
-    /* 1. Masquer le menu Streamlit en haut à droite (Hamburger) */
-    #MainMenu {visibility: hidden;}
+    /* 1. Masquer TOUT le bloc de boutons en haut à droite (Deploy, Menu, etc.) */
+    [data-testid="stHeaderActionElements"] {display: none;}
+    [data-testid="stAppDeployButton"] {display: none;}
     
-    /* 2. Masquer le bouton 'Deploy' */
+    /* 2. Double sécurité pour les anciens noms de code Streamlit */
+    #MainMenu {visibility: hidden;}
     .stDeployButton {display:none;}
     
     /* 3. Masquer le footer 'Made with Streamlit' */
     footer {visibility: hidden;}
 
-    /* 🚨 ATTENTION : ON NE CACHE PAS LE HEADER ICI, SINON LA FLÈCHE DISPARAÎT ! 🚨 */
+    /* 4. On s'assure que le header reste transparent mais actif pour garder la flèche */
+    header {background-color: transparent !important;}
 
-    /* 4. Tes styles pour tes bannières de Coach */
+    /* 5. Tes styles persos (Coach) */
     .status-banner { padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; color: white; font-weight: bold; font-size: 1.2rem; }
     .status-ok { background-color: #00E676; }
     .status-warn { background-color: #FFA726; }
     .status-bad { background-color: #EF5350; }
     </style>
     """, unsafe_allow_html=True)
-
 # --- 3. CONNEXION DATABASE (GOOGLE SHEETS) ---
 @st.cache_resource
 def get_db_connection():
