@@ -59,9 +59,10 @@ st.markdown("""
     /* 1. Masquer le menu Hamburger (les 3 traits) */
     #MainMenu {visibility: hidden;}
     
-    /* 2. Masquer le bouton 'Deploy' et les décorations du haut */
+    /* 2. Masquer le bouton 'Deploy' */
     .stDeployButton {display:none;}
-    header {visibility: hidden;}
+    /* On NE MASQUE PLUS le header entier pour garder la flèche de la sidebar */
+    /* header {visibility: hidden;} */
     
     /* 3. Masquer le footer 'Made with Streamlit' */
     footer {visibility: hidden;}
