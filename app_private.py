@@ -6,48 +6,39 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 def update_revenus_cloud(user_email, df_cleaned):
-    """Ecrase les revenus de l'utilisateur avec la version corrigée"""
+    """Ecrase les revenus en forçant le format numérique propre"""
     sh = get_db_connection()
     ws = sh.worksheet("DATA")
     
-    # 1. On récupère TOUT le fichier pour ne pas effacer les autres clients
+    # 1. On récupère tout
     all_records = ws.get_all_records()
+    other_users_data = [r for r in all_records if str(r.get("User")) != str(user_email)]
     
-    # 2. On garde les données des AUTRES utilisateurs
-    cleaned_data = [r for r in all_records if str(r.get("User")) != str(user_email)]
-    
-    # 3. On prépare TES nouvelles données corrigées
+    # 2. On prépare les données corrigées
     new_user_data = []
     for _, row in df_cleaned.iterrows():
         r = row.to_dict()
         r["User"] = user_email
         
-        # --- FIX ANTI-GONFLEMENT SÉCURISÉ ---
+        # --- FIX MAGIQUE POUR LE MONTANT ---
+        val = str(r["Montant Net"]).replace(',', '.')
         try:
-            # Nettoyage de la valeur (virgule -> point)
-            val_propre = str(r["Montant Net"]).replace(',', '.')
-            # Conversion en nombre réel (float)
-            r["Montant Net"] = round(float(val_propre), 2)
+            r["Montant Net"] = round(float(val), 2)
         except:
             r["Montant Net"] = 0.0
             
-        # Conversion des dates en texte pour Google Sheets
         r["Date"] = str(r["Date"])
         r["Date Paiement"] = str(r["Date Paiement"])
         new_user_data.append(r)
-    
-    # 4. FUSION : On rassemble les autres utilisateurs + tes nouvelles données
-    final_to_upload = cleaned_data + new_user_data
         
-    # 5. ENVOI : On vide le sheet et on remplace tout d'un coup
+    # 3. Fusion et sauvegarde
+    final_data = other_users_data + new_user_data
+    
     ws.clear()
-    if final_to_upload:
-        # On extrait les titres des colonnes depuis le premier dictionnaire
-        headers = list(final_to_upload[0].keys())
-        # On envoie les titres + toutes les valeurs
-        ws.update([headers] + [list(d.values()) for d in final_to_upload])
+    if final_data:
+        headers = list(final_data[0].keys())
+        ws.update([headers] + [list(d.values()) for d in final_data])
     else:
-        # Si vraiment tout est vide, on remet au moins les en-têtes de base
         ws.append_row(["User", "Date", "Mois", "Source", "Type", "Détails", "Montant Net", "Date Paiement", "Mois Paiement"])
         
 # --- 1. CONFIGURATION ---
