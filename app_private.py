@@ -387,40 +387,30 @@ if menu == "🔮 Tableau de Bord":
     # 🗓️ CONSTRUCTION DE LA TIMELINE
     # =================================================================
     tl_data = []
-    # 1. On ajoute les Charges à la timeline
+    # 1. AJOUT DES CHARGES
     if not df_c_live.empty:
         for _, r in df_c_live.iterrows():
-            if r['Montant'] > 0: 
-                # On s'assure que le jour est un nombre
+            # On ne prend que les charges qui ont un montant
+            m = pd.to_numeric(str(r.get('Montant', 0)).replace(',', '.'), errors='coerce')
+            if m and m > 0: 
                 try: j = int(r['Jour'])
                 except: j = 1
-                tl_data.append({"Jour": j, "Nom": r['Intitule'], "Type": "Charge", "Montant": -float(r['Montant'])})
+                tl_data.append({"Jour": j, "Nom": r['Intitule'], "Type": "Charge", "Montant": -float(m)})
             
-   # 2. On ajoute les Revenus (VERSION SÉCURITÉ MAX POUR LE JOUR)
+    # 2. AJOUT DES REVENUS (DÉJÀ FILTRÉS PAR MOIS PLUS HAUT)
     if not revenus_du_mois.empty:
         for _, r in revenus_du_mois.iterrows():
             try:
-                # On récupère la valeur brute de la date
-                date_brute = str(r["Date Paiement"]).strip()
-                
-                # TEST 1 : Format standard ISO (YYYY-MM-DD) -> Le jour est à la fin
-                # Si la date ressemble à 2024-03-12
-                if "-" in date_brute and len(date_brute) >= 10:
-                    d = int(date_brute.split("-")[2][:2])
-                
-                # TEST 2 : Format Français (DD/MM/YYYY) -> Le jour est au début
-                # Si la date ressemble à 12/03/2024
-                elif "/" in date_brute:
-                    d = int(date_brute.split("/")[0])
-                
-                # TEST 3 : Secours via Pandas (si les tests manuels échouent)
+                # On récupère la date brute pour extraire le VRAI jour
+                date_s = str(r["Date Paiement"]).strip()
+                if "-" in date_s: # Format YYYY-MM-DD
+                    d = int(date_s.split("-")[2][:2])
+                elif "/" in date_s: # Format DD/MM/YYYY
+                    d = int(date_s.split("/")[0])
                 else:
-                    d = pd.to_datetime(date_brute, dayfirst=True).day
+                    d = pd.to_datetime(date_s).day
             except:
-                d = 1 # Si tout échoue, on met le 1er
-            
-            # Sécurité : un jour ne peut pas être > 31
-            if d > 31: d = 1
+                d = 1
             
             tl_data.append({
                 "Jour": d, 
@@ -428,6 +418,21 @@ if menu == "🔮 Tableau de Bord":
                 "Type": r["Type"], 
                 "Montant": float(r["Montant Net"])
             })
+            
+    # 3. CRÉATION DU DATAFRAME FINAL
+    df_tl = pd.DataFrame(tl_data)
+
+    if not df_tl.empty:
+        # On trie par jour pour que le graphique soit dans le bon sens
+        df_tl = df_tl.sort_values("Jour")
+        # On calcule le cumulé pour la courbe
+        df_tl["Cumul"] = df_tl["Montant"].cumsum()
+        
+        # --- ICI TU PEUX METTRE TON AFFICHAGE (Graphique ou Tableau) ---
+        st.markdown("### 🗓️ Flux de trésorerie")
+        st.area_chart(df_tl.set_index("Jour")["Cumul"])
+    else:
+        st.info("Aucune donnée à afficher pour ce mois.")
             
     # 4. Création du tableau final pour le graphique
     df_tl = pd.DataFrame(tl_data)
