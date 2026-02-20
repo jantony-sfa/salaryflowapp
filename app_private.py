@@ -322,9 +322,7 @@ with st.sidebar:
         st.rerun()
 
 # --- PAGE 1 : DASHBOARD ---
-# --- PAGE 1 : DASHBOARD ---
 if menu == "🔮 Tableau de Bord":
-    # 1. NAVIGATION MOIS
     c1, c2, c3 = st.columns([1, 6, 1])
     if c1.button("◀"):
         st.session_state['view_date'] = (st.session_state['view_date'] - timedelta(days=1)).replace(day=1)
@@ -337,77 +335,149 @@ if menu == "🔮 Tableau de Bord":
         st.session_state['view_date'] = (st.session_state['view_date'] + timedelta(days=32)).replace(day=1)
         st.rerun()
 
-    # 2. MOTEUR DE CALCUL CENTRAL
+    df_r, df_c = st.session_state['data_revenus'], st.session_state['data_charges']
+    
+    # ... (Tu es dans la section PAGE 1 : DASHBOARD, juste après les boutons Précédent/Suivant) ...
+
+    # =================================================================
+    # 🧠 MOTEUR DE CALCUL CENTRAL (KPIs + TIMELINE)
+    # =================================================================
+    
+    # 1. Récupération des données LIVE
     df_r_live = st.session_state['data_revenus']
     df_c_live = st.session_state['data_charges']
-    mois_actuel_str = st.session_state['view_date'].strftime("%Y-%m")
     
+    # 2. Préparation des variables par défaut (pour éviter les crashs si vide)
+    mois_actuel_str = st.session_state['view_date'].strftime("%Y-%m")
+    revenus_du_mois = pd.DataFrame() # Vide par défaut
     in_month = 0.0
-    revenus_du_mois = pd.DataFrame()
+    
+    # 3. Calcul des REVENUS du mois
+    if not df_r_live.empty:
+        # On s'assure que la colonne existe
+        if "Mois Paiement" in df_r_live.columns:
+            revenus_du_mois = df_r_live[df_r_live["Mois Paiement"] == mois_actuel_str]
+            
+            # Calcul du total des entrées (sécurisé)
+            # On convertit en nombre au cas où ce serait du texte
+            revenus_du_mois["Montant Net"] = pd.to_numeric(revenus_du_mois["Montant Net"], errors='coerce').fillna(0.0)
+            in_month = revenus_du_mois["Montant Net"].sum()
 
-    # Calcul des Revenus
-    if not df_r_live.empty and "Mois Paiement" in df_r_live.columns:
-        revenus_du_mois = df_r_live[df_r_live["Mois Paiement"] == mois_actuel_str].copy()
-        revenus_du_mois["Montant Net"] = pd.to_numeric(revenus_du_mois["Montant Net"], errors='coerce').fillna(0.0)
-        in_month = revenus_du_mois["Montant Net"].sum()
-
+    # 4. Total Entrées (Revenus réels + Simulation)
     entree_totale = in_month + st.session_state['sim_val']
-
-    # Calcul des Charges
+    
+    # 5. Calcul des CHARGES (Fixes / Var / Epargne)
+    # On convertit tout en numérique d'un coup pour éviter les bugs
     if not df_c_live.empty and "Montant" in df_c_live.columns:
-        df_c_live["Montant"] = pd.to_numeric(df_c_live["Montant"].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
+        df_c_live["Montant"] = pd.to_numeric(df_c_live["Montant"], errors='coerce').fillna(0.0)
+        
         fixes = df_c_live[df_c_live["Groupe"]=="FIXES"]["Montant"].sum()
-        total_sorties = df_c_live["Montant"].sum()
+        epargne = df_c_live[df_c_live["Groupe"]=="EPARGNE"]["Montant"].sum()
+        variables = df_c_live[df_c_live["Groupe"]=="VARIABLES"]["Montant"].sum()
     else:
-        fixes, total_sorties = 0.0, 0.0
+        fixes, epargne, variables = 0.0, 0.0, 0.0
 
+    total_sorties = fixes + epargne + variables
+    
+    # 6. Résultats Finaux
     solde = entree_totale - total_sorties
     score = (entree_totale / fixes) if fixes > 0 else 0
 
-    # 3. ANALYSE ET BANNIÈRE (RÉTABLIE)
-    if solde < 0:
-        etat, css = "🔴 RISQUE DÉTECTÉ", "status-danger"
-        desc = "Tes dépenses dépassent tes revenus ce mois-ci."
-    elif score < 1.2:
-        etat, css = "🟠 ZONE DE VIGILANCE", "status-warning"
-        desc = "Tes revenus couvrent tes charges mais la marge est faible."
-    else:
-        etat, css = "🟢 SITUATION SAINE", "status-success"
-        desc = "Tes finances sont équilibrées pour ce mois."
-
-    st.markdown(f'<div class="status-banner {css}"><b>{etat}</b><br>{desc}</div>', unsafe_allow_html=True)
-
-    # 4. AFFICHAGE DES MÉTRIQUES (KPIs)
-    k1, k2, k3 = st.columns(3)
-    k1.metric("Entrées", f"{entree_totale:,.2f} €")
-    k2.metric("Sorties", f"{total_sorties:,.2f} €")
-    k3.metric("Solde", f"{solde:,.2f} €", delta=f"{solde:.2f} €")
-
-    # 5. SECTION GESTION & CORRECTIONS (Tableau éditable)
-    st.markdown("### 🛠️ Gestion & Corrections")
-    if not revenus_du_mois.empty:
-        # On affiche le data_editor pour que tu puisses modifier en direct
-        edited_r = st.data_editor(revenus_du_mois, use_container_width=True, hide_index=True)
-        if st.button("💾 Sauvegarder les modifs"):
-             update_revenus_cloud(user, edited_r) # Assure-toi que cette fonction existe
-             st.rerun()
-    else:
-        st.info("Aucun revenu pour ce mois.")
-
-    # 6. TIMELINE DÉTAILLÉE (Tableau au lieu du graphique)
-    st.markdown("### 🗓️ Timeline de Trésorerie")
+    # =================================================================
+    # 🗓️ CONSTRUCTION DE LA TIMELINE
+    # =================================================================
     tl_data = []
-    # (Calcul de la liste tl_data pour le tableau...)
-    for _, r in df_c_live.iterrows():
-        tl_data.append({"Jour": int(r['Jour']), "Nom": r['Intitule'], "Type": "Charge", "Montant": -float(r['Montant'])})
-    for _, r in revenus_du_mois.iterrows():
-        try: d = pd.to_datetime(r["Date Paiement"]).day
-        except: d = 1
-        tl_data.append({"Jour": d, "Nom": r["Source"], "Type": "Revenu", "Montant": float(r["Montant Net"])})
-    
-    df_tl = pd.DataFrame(tl_data).sort_values("Jour")
+    # 1. AJOUT DES CHARGES
+    if not df_c_live.empty:
+        for _, r in df_c_live.iterrows():
+            # On ne prend que les charges qui ont un montant
+            m = pd.to_numeric(str(r.get('Montant', 0)).replace(',', '.'), errors='coerce')
+            if m and m > 0: 
+                try: j = int(r['Jour'])
+                except: j = 1
+                tl_data.append({"Jour": j, "Nom": r['Intitule'], "Type": "Charge", "Montant": -float(m)})
+            
+    # 2. AJOUT DES REVENUS (DÉJÀ FILTRÉS PAR MOIS PLUS HAUT)
+    if not revenus_du_mois.empty:
+        for _, r in revenus_du_mois.iterrows():
+            try:
+                # On récupère la date brute pour extraire le VRAI jour
+                date_s = str(r["Date Paiement"]).strip()
+                if "-" in date_s: # Format YYYY-MM-DD
+                    d = int(date_s.split("-")[2][:2])
+                elif "/" in date_s: # Format DD/MM/YYYY
+                    d = int(date_s.split("/")[0])
+                else:
+                    d = pd.to_datetime(date_s).day
+            except:
+                d = 1
+            
+            tl_data.append({
+                "Jour": d, 
+                "Nom": r["Source"], 
+                "Type": r["Type"], 
+                "Montant": float(r["Montant Net"])
+            })
+            
+    # 3. CRÉATION DU DATAFRAME FINAL
+    df_tl = pd.DataFrame(tl_data)
+
     if not df_tl.empty:
-        st.table(df_tl) # Un tableau simple et pro
+        # On trie par jour pour que le graphique soit dans le bon sens
+        df_tl = df_tl.sort_values("Jour")
+        # On calcule le cumulé pour la courbe
+        df_tl["Cumul"] = df_tl["Montant"].cumsum()
+        
+        # --- ICI TU PEUX METTRE TON AFFICHAGE (Graphique ou Tableau) ---
+        st.markdown("### 🗓️ Flux de trésorerie")
+        st.area_chart(df_tl.set_index("Jour")["Cumul"])
+    else:
+        st.info("Aucune donnée à afficher pour ce mois.")
+            
+    # 4. Création du tableau final pour le graphique
+    df_tl = pd.DataFrame(tl_data)
+    if not df_tl.empty:
+        df_tl = df_tl.sort_values("Jour")
+        df_tl["Cumul"] = df_tl["Montant"].cumsum()
+
+    # A. Ajout des CHARGES
+    for _, r in df_c_live.iterrows():
+        try:
+            if r['Montant'] > 0: 
+                tl_data.append({
+                    "Jour": int(r['Jour']), 
+                    "Nom": r['Intitule'], 
+                    "Type": "Charge", 
+                    "Montant": -float(r['Montant'])
+                })
+        except: pass
+
+    # B. Ajout des REVENUS (ceux filtrés plus haut)
+    if not revenus_du_mois.empty:
+        for _, r in revenus_du_mois.iterrows():
+            try:
+                # On essaie de lire la date proprement
+                d_obj = pd.to_datetime(r["Date Paiement"], dayfirst=True, errors='coerce')
+                montant = float(r["Montant Net"])
+                
+                if pd.notnull(d_obj) and montant > 0:
+                    tl_data.append({
+                        "Jour": d_obj.day, 
+                        "Nom": r["Source"], 
+                        "Type": "Revenu", 
+                        "Montant": montant
+                    })
+            except: pass
+
+    # C. Ajout de la SIMULATION
+    if st.session_state['sim_val'] > 0: 
+        tl_data.append({"Jour": 15, "Nom": "Simulation", "Type": "Sim", "Montant": st.session_state['sim_val']})
+
+    # D. Finalisation du Tableau Timeline
+    df_tl = pd.DataFrame(tl_data)
+    if not df_tl.empty:
+        df_tl = df_tl.sort_values("Jour")
+        df_tl["Cumul"] = df_tl["Montant"].cumsum()
     # =================================================================
     # 🧠 ANALYSE DU COACH
     # =================================================================
