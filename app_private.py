@@ -627,10 +627,10 @@ elif menu == "💳 Charges & Budgets":
                 edited["Montant"] = pd.to_numeric(edited["Montant"], errors='coerce').fillna(0.0)
 
             # Sauvegarde
-            save_charges_cloud(user, edited)
-            st.session_state['data_charges'] = edited
-            st.success("✅ Vos charges sont à jour !")
-            st.rerun()
+    save_charges_cloud(user, edited)
+        st.session_state['data_charges'] = edited
+        st.success("✅ Vos charges sont à jour !")
+        st.rerun()
             
         except Exception as e:
             st.error(f"Erreur : {e}")
