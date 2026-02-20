@@ -427,18 +427,6 @@ if menu == "🔮 Tableau de Bord":
         df_tl = df_tl.sort_values("Jour")
         # On calcule le cumulé pour la courbe
         df_tl["Cumul"] = df_tl["Montant"].cumsum()
-        
-        # --- ICI TU PEUX METTRE TON AFFICHAGE (Graphique ou Tableau) ---
-        st.markdown("### 🗓️ Flux de trésorerie")
-        st.area_chart(df_tl.set_index("Jour")["Cumul"])
-    else:
-        st.info("Aucune donnée à afficher pour ce mois.")
-            
-    # 4. Création du tableau final pour le graphique
-    df_tl = pd.DataFrame(tl_data)
-    if not df_tl.empty:
-        df_tl = df_tl.sort_values("Jour")
-        df_tl["Cumul"] = df_tl["Montant"].cumsum()
 
     # A. Ajout des CHARGES
     for _, r in df_c_live.iterrows():
