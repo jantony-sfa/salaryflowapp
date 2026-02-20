@@ -206,13 +206,6 @@ def save_revenu_cloud(user_email, row_dict):
     ]
     ws.append_row(row)
 
-# Force la conversion en nombre décimal avant l'envoi au Cloud
-try:
-    montant_propre = float(str(montant_net).replace(',', '.'))
-except:
-    montant_propre = 0.0
-
-
 def save_charges_cloud(user_email, df_charges):
     sh = get_db_connection()
     ws = sh.worksheet("CHARGES")
@@ -655,10 +648,12 @@ elif menu == "➕ Ajouter un revenu":
     else:
         montant_final = nettoyer_chiffre(st.text_input("Net (€)", "0.00"))
 
-    if st.button("Valider et Sauvegarder", type="primary"):
+  if st.button("Valider et Sauvegarder", type="primary"):
         # On force la conversion en texte avec virgule pour Google Sheets
         montant_final_str = str(round(montant_final, 2)).replace('.', ',')
-        new = {"Date": date_mission.strftime("%d/%m/%Y"), "Mois": date_mission.strftime("%Y-%m"), "Source": source, "Type": typ, "Détails": "App", "Montant Net": montant_final, "Date Paiement": d_pay.strftime("%Y-%m-%d"), "Mois Paiement": d_pay.strftime("%Y-%m")}
+        
+        # 🚨 CORRECTION ICI : on injecte "montant_final_str" au lieu de "montant_final"
+        new = {"Date": date_mission.strftime("%d/%m/%Y"), "Mois": date_mission.strftime("%Y-%m"), "Source": source, "Type": typ, "Détails": "App", "Montant Net": montant_final_str, "Date Paiement": d_pay.strftime("%Y-%m-%d"), "Mois Paiement": d_pay.strftime("%Y-%m")}
         
         # SAUVEGARDE GOOGLE SHEETS
         try:
