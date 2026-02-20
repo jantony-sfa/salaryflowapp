@@ -647,8 +647,8 @@ elif menu == "➕ Ajouter un revenu":
         
     else:
         montant_final = nettoyer_chiffre(st.text_input("Net (€)", "0.00"))
-
-  if st.button("Valider et Sauvegarder", type="primary"):
+        
+    if st.button("Valider et Sauvegarder", type="primary"):
         # On force la conversion en texte avec virgule pour Google Sheets
         montant_final_str = str(round(montant_final, 2)).replace('.', ',')
         
