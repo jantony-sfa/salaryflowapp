@@ -604,14 +604,16 @@ elif menu == "➕ Ajouter un revenu":
     if st.button("Valider et Sauvegarder", type="primary"):
         # On force la conversion en texte avec virgule pour Google Sheets
         montant_final_str = str(round(montant_final, 2)).replace('.', ',')
-        
-        # 🚨 CORRECTION ICI : on injecte "montant_final_str" au lieu de "montant_final"
         new = {"Date": date_mission.strftime("%d/%m/%Y"), "Mois": date_mission.strftime("%Y-%m"), "Source": source, "Type": typ, "Détails": "App", "Montant Net": montant_final_str, "Date Paiement": d_pay.strftime("%Y-%m-%d"), "Mois Paiement": d_pay.strftime("%Y-%m")}
         
         # SAUVEGARDE GOOGLE SHEETS
         try:
             save_revenu_cloud(user, new)
-            st.session_state['data_revenus'] = pd.concat([st.session_state['data_revenus'], pd.DataFrame([new])], ignore_index=True)
+            
+            # 🚨 LA CORRECTION EST ICI : On vide la mémoire pour forcer le rafraîchissement auto
+            if 'data_loaded' in st.session_state:
+                del st.session_state['data_loaded']
+                
             st.success("✅ Sauvegardé dans le Cloud !")
             st.rerun()
         except Exception as e:
