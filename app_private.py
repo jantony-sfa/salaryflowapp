@@ -387,6 +387,40 @@ if menu == "🔮 Tableau de Bord":
     # 🗓️ CONSTRUCTION DE LA TIMELINE
     # =================================================================
     tl_data = []
+    # 1. On ajoute les Charges à la timeline
+    if not df_c_live.empty:
+        for _, r in df_c_live.iterrows():
+            if r['Montant'] > 0: 
+                # On s'assure que le jour est un nombre
+                try: j = int(r['Jour'])
+                except: j = 1
+                tl_data.append({"Jour": j, "Nom": r['Intitule'], "Type": "Charge", "Montant": -float(r['Montant'])})
+            
+    # 2. On ajoute les Revenus (LA CORRECTION DU JOUR EST ICI)
+    if not revenus_du_mois.empty:
+        for _, r in revenus_du_mois.iterrows():
+            try:
+                # Extraction propre du JOUR depuis la date YYYY-MM-DD
+                d = pd.to_datetime(r["Date Paiement"]).day
+            except:
+                d = 1
+            
+            tl_data.append({
+                "Jour": d, 
+                "Nom": r["Source"], 
+                "Type": r["Type"], 
+                "Montant": float(r["Montant Net"])
+            })
+            
+    # 3. On ajoute la Simulation si elle existe
+    if st.session_state['sim_val'] > 0: 
+        tl_data.append({"Jour": 15, "Nom": "Simulation", "Type": "Sim", "Montant": float(st.session_state['sim_val'])})
+            
+    # 4. Création du tableau final pour le graphique
+    df_tl = pd.DataFrame(tl_data)
+    if not df_tl.empty:
+        df_tl = df_tl.sort_values("Jour")
+        df_tl["Cumul"] = df_tl["Montant"].cumsum()
 
     # A. Ajout des CHARGES
     for _, r in df_c_live.iterrows():
