@@ -46,9 +46,10 @@ st.markdown("""
         display: none !important;
     }
 
-    /* 2. DÉTRUIRE LE BADGE FLOTTANT STREAMLIT CLOUD (Share, GitHub, Etoiles) */
-    .viewerBadge_container, .viewerBadge_link, .st-emotion-cache-1wbqy5l {
+    /* 2. DÉTRUIRE LE BADGE FLOTTANT STREAMLIT CLOUD */
+    .viewerBadge_container, .viewerBadge_link {
         display: none !important;
+    }
     }
     
     /* 3. DÉTRUIRE LE FOOTER */
