@@ -396,14 +396,31 @@ if menu == "🔮 Tableau de Bord":
                 except: j = 1
                 tl_data.append({"Jour": j, "Nom": r['Intitule'], "Type": "Charge", "Montant": -float(r['Montant'])})
             
-    # 2. On ajoute les Revenus (LA CORRECTION DU JOUR EST ICI)
+   # 2. On ajoute les Revenus (VERSION SÉCURITÉ MAX POUR LE JOUR)
     if not revenus_du_mois.empty:
         for _, r in revenus_du_mois.iterrows():
             try:
-                # Extraction propre du JOUR depuis la date YYYY-MM-DD
-                d = pd.to_datetime(r["Date Paiement"]).day
+                # On récupère la valeur brute de la date
+                date_brute = str(r["Date Paiement"]).strip()
+                
+                # TEST 1 : Format standard ISO (YYYY-MM-DD) -> Le jour est à la fin
+                # Si la date ressemble à 2024-03-12
+                if "-" in date_brute and len(date_brute) >= 10:
+                    d = int(date_brute.split("-")[2][:2])
+                
+                # TEST 2 : Format Français (DD/MM/YYYY) -> Le jour est au début
+                # Si la date ressemble à 12/03/2024
+                elif "/" in date_brute:
+                    d = int(date_brute.split("/")[0])
+                
+                # TEST 3 : Secours via Pandas (si les tests manuels échouent)
+                else:
+                    d = pd.to_datetime(date_brute, dayfirst=True).day
             except:
-                d = 1
+                d = 1 # Si tout échoue, on met le 1er
+            
+            # Sécurité : un jour ne peut pas être > 31
+            if d > 31: d = 1
             
             tl_data.append({
                 "Jour": d, 
@@ -411,10 +428,6 @@ if menu == "🔮 Tableau de Bord":
                 "Type": r["Type"], 
                 "Montant": float(r["Montant Net"])
             })
-            
-    # 3. On ajoute la Simulation si elle existe
-    if st.session_state['sim_val'] > 0: 
-        tl_data.append({"Jour": 15, "Nom": "Simulation", "Type": "Sim", "Montant": float(st.session_state['sim_val'])})
             
     # 4. Création du tableau final pour le graphique
     df_tl = pd.DataFrame(tl_data)
