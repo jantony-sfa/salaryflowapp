@@ -322,29 +322,30 @@ with st.sidebar:
         st.rerun()
 
 # --- PAGE 1 : DASHBOARD ---
+# --- PAGE 1 : DASHBOARD ---
 if menu == "🔮 Tableau de Bord":
-    # 1. NAVIGATION ET TITRE
+    # 1. NAVIGATION MOIS
     c1, c2, c3 = st.columns([1, 6, 1])
     if c1.button("◀"):
         st.session_state['view_date'] = (st.session_state['view_date'] - timedelta(days=1)).replace(day=1)
         st.rerun()
     
+    mois_str = st.session_state['view_date'].strftime("%Y-%m")
     c2.markdown(f"<h2 style='text-align: center; margin:0;'>{st.session_state['view_date'].strftime('%B %Y').capitalize()}</h2>", unsafe_allow_html=True)
     
     if c3.button("▶"):
         st.session_state['view_date'] = (st.session_state['view_date'] + timedelta(days=32)).replace(day=1)
         st.rerun()
 
-    # 2. PRÉPARATION DES DONNÉES
-    mois_actuel_str = st.session_state['view_date'].strftime("%Y-%m")
+    # 2. MOTEUR DE CALCUL CENTRAL
     df_r_live = st.session_state['data_revenus']
     df_c_live = st.session_state['data_charges']
+    mois_actuel_str = st.session_state['view_date'].strftime("%Y-%m")
     
-    # Initialisation des compteurs
     in_month = 0.0
     revenus_du_mois = pd.DataFrame()
 
-    # 3. CALCUL DES ENTRÉES (REVENUS)
+    # Calcul des Revenus
     if not df_r_live.empty and "Mois Paiement" in df_r_live.columns:
         revenus_du_mois = df_r_live[df_r_live["Mois Paiement"] == mois_actuel_str].copy()
         revenus_du_mois["Montant Net"] = pd.to_numeric(revenus_du_mois["Montant Net"], errors='coerce').fillna(0.0)
@@ -352,38 +353,61 @@ if menu == "🔮 Tableau de Bord":
 
     entree_totale = in_month + st.session_state['sim_val']
 
-    # 4. CALCUL DES SORTIES (CHARGES)
+    # Calcul des Charges
     if not df_c_live.empty and "Montant" in df_c_live.columns:
-        # Nettoyage rapide des montants
         df_c_live["Montant"] = pd.to_numeric(df_c_live["Montant"].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
-        
         fixes = df_c_live[df_c_live["Groupe"]=="FIXES"]["Montant"].sum()
-        epargne = df_c_live[df_c_live["Groupe"]=="EPARGNE"]["Montant"].sum()
-        variables = df_c_live[df_c_live["Groupe"]=="VARIABLES"]["Montant"].sum()
+        total_sorties = df_c_live["Montant"].sum()
     else:
-        fixes, epargne, variables = 0.0, 0.0, 0.0
+        fixes, total_sorties = 0.0, 0.0
 
-    total_sorties = fixes + epargne + variables
     solde = entree_totale - total_sorties
     score = (entree_totale / fixes) if fixes > 0 else 0
 
-    # 5. AFFICHAGE DES RÉSULTATS (KPIs)
-    # Ici tu peux remettre tes colonnes de métriques (st.metric) ou ta bannière de risque
+    # 3. ANALYSE ET BANNIÈRE (RÉTABLIE)
+    if solde < 0:
+        etat, css = "🔴 RISQUE DÉTECTÉ", "status-danger"
+        desc = "Tes dépenses dépassent tes revenus ce mois-ci."
+    elif score < 1.2:
+        etat, css = "🟠 ZONE DE VIGILANCE", "status-warning"
+        desc = "Tes revenus couvrent tes charges mais la marge est faible."
+    else:
+        etat, css = "🟢 SITUATION SAINE", "status-success"
+        desc = "Tes finances sont équilibrées pour ce mois."
+
+    st.markdown(f'<div class="status-banner {css}"><b>{etat}</b><br>{desc}</div>', unsafe_allow_html=True)
+
+    # 4. AFFICHAGE DES MÉTRIQUES (KPIs)
     k1, k2, k3 = st.columns(3)
     k1.metric("Entrées", f"{entree_totale:,.2f} €")
     k2.metric("Sorties", f"{total_sorties:,.2f} €")
     k3.metric("Solde", f"{solde:,.2f} €", delta=f"{solde:.2f} €")
 
-    st.markdown("---")
-
-    # 6. SECTION GESTION & CORRECTIONS (Ton tableau éditable)
-    st.markdown("### 🛠️ Gestion des revenus du mois")
+    # 5. SECTION GESTION & CORRECTIONS (Tableau éditable)
+    st.markdown("### 🛠️ Gestion & Corrections")
     if not revenus_du_mois.empty:
-        # Affichage du tableau pour modification rapide
-        st.data_editor(revenus_du_mois, use_container_width=True, hide_index=True)
+        # On affiche le data_editor pour que tu puisses modifier en direct
+        edited_r = st.data_editor(revenus_du_mois, use_container_width=True, hide_index=True)
+        if st.button("💾 Sauvegarder les modifs"):
+             update_revenus_cloud(user, edited_r) # Assure-toi que cette fonction existe
+             st.rerun()
     else:
-        st.info("Aucun revenu enregistré pour ce mois.")
+        st.info("Aucun revenu pour ce mois.")
 
+    # 6. TIMELINE DÉTAILLÉE (Tableau au lieu du graphique)
+    st.markdown("### 🗓️ Timeline de Trésorerie")
+    tl_data = []
+    # (Calcul de la liste tl_data pour le tableau...)
+    for _, r in df_c_live.iterrows():
+        tl_data.append({"Jour": int(r['Jour']), "Nom": r['Intitule'], "Type": "Charge", "Montant": -float(r['Montant'])})
+    for _, r in revenus_du_mois.iterrows():
+        try: d = pd.to_datetime(r["Date Paiement"]).day
+        except: d = 1
+        tl_data.append({"Jour": d, "Nom": r["Source"], "Type": "Revenu", "Montant": float(r["Montant Net"])})
+    
+    df_tl = pd.DataFrame(tl_data).sort_values("Jour")
+    if not df_tl.empty:
+        st.table(df_tl) # Un tableau simple et pro
     # =================================================================
     # 🧠 ANALYSE DU COACH
     # =================================================================
