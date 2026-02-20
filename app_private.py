@@ -6,32 +6,26 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 def update_revenus_cloud(user_email, df_cleaned):
-    """Ecrase les revenus en forçant le format numérique propre"""
+    """Ecrase les revenus en forçant le format numérique propre via l'apostrophe"""
     sh = get_db_connection()
     ws = sh.worksheet("DATA")
     
-    # 1. On récupère tout
     all_records = ws.get_all_records()
     other_users_data = [r for r in all_records if str(r.get("User")) != str(user_email)]
     
-    # 2. On prépare les données corrigées
     new_user_data = []
     for _, row in df_cleaned.iterrows():
         r = row.to_dict()
         r["User"] = user_email
         
-        # --- FIX MAGIQUE POUR LE MONTANT ---
-        val = str(r["Montant Net"]).replace(',', '.')
-        try:
-            r["Montant Net"] = round(float(val), 2)
-        except:
-            r["Montant Net"] = 0.0
+        # 🚨 LE HACK ABSOLU POUR L'HISTORIQUE : On met l'apostrophe
+        val_pure = str(r["Montant Net"]).replace(',', '.')
+        r["Montant Net"] = f"'{val_pure}"
             
         r["Date"] = str(r["Date"])
         r["Date Paiement"] = str(r["Date Paiement"])
         new_user_data.append(r)
         
-    # 3. Fusion et sauvegarde
     final_data = other_users_data + new_user_data
     
     ws.clear()
@@ -183,6 +177,10 @@ def load_user_data(user_email):
 def save_revenu_cloud(user_email, row_dict):
     sh = get_db_connection()
     ws = sh.worksheet("DATA")
+    
+    # 🚨 LE HACK ABSOLU : On force Google Sheets à lire ça comme du texte avec l'apostrophe '
+    montant_securise = f"'{row_dict['Montant Net']}".replace(',', '.')
+    
     # Ordre des colonnes correspondant au Sheet
     row = [
         user_email, 
@@ -191,7 +189,7 @@ def save_revenu_cloud(user_email, row_dict):
         row_dict["Source"], 
         row_dict["Type"], 
         row_dict["Détails"], 
-        row_dict["Montant Net"], 
+        montant_securise,  # <-- ON ENVOIE LA VALEUR BLOQUÉE ICI
         row_dict["Date Paiement"], 
         row_dict["Mois Paiement"]
     ]
