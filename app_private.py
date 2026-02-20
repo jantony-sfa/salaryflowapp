@@ -204,22 +204,31 @@ def save_charges_cloud(user_email, df_charges):
     all_data = ws.get_all_records()
     
     # 2. Garder tout ce qui n'est PAS à l'utilisateur actuel
-    new_data = [row for row in all_data if row['User'] != user_email]
+    new_data = [row for row in all_data if str(row.get('User')) != str(user_email)]
     
-    # 3. Ajouter les nouvelles charges (🚨 C'est ici que "df_revenus" faisait planter si c'était écrit !)
+    # 3. Ajouter les nouvelles charges de l'utilisateur
     for _, row in df_charges.iterrows():
         r = row.to_dict()
         r['User'] = user_email
+        
+        # 🚨 HACK APOSTROPHE (Bloque la multiplication Google Sheets)
+        val_pure = str(r.get("Montant", 0)).replace(',', '.')
+        r['Montant'] = f"'{val_pure}"
+        
+        # 🚨 SÉCURITÉ TIMELINE (Si tu oublies de mettre un jour, on met le 1er du mois)
+        try:
+            r['Jour'] = int(r.get("Jour", 1))
+        except:
+            r['Jour'] = 1
+            
         new_data.append(r)
         
     # 4. Tout réécrire (Nettoyage + Mise à jour)
     ws.clear()
     if new_data:
-        # Réécrire l'en-tête + les données
         headers = list(new_data[0].keys())
         ws.update([headers] + [list(d.values()) for d in new_data])
     else:
-        # Juste l'en-tête si vide
         ws.append_row(["User", "Groupe", "Sous-Groupe", "Intitule", "Montant", "Jour"])
         
 # --- 4. LOGIN SYSTEM (Email = ID) ---
@@ -628,7 +637,11 @@ elif menu == "💳 Charges & Budgets":
 
             # Sauvegarde
             save_charges_cloud(user, edited)
-            st.session_state['data_charges'] = edited
+            
+            # 🚨 ON VIDE LA MÉMOIRE POUR FORCER L'ACTUALISATION DU DASHBOARD
+            if 'data_loaded' in st.session_state:
+                del st.session_state['data_loaded']
+                
             st.success("✅ Vos charges sont à jour !")
             st.rerun()
             
